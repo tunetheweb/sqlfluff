@@ -32,7 +32,7 @@
 # MD036: false                  # Emphasis used instead of a heading
 # MD040: false                  # Don't demand language for all code blocks
 
-# #################
-# # Rules by tags #
-# #################
+#################
+# Rules by tags #
+#################
 # blank_lines: false             # Error on blank lines
