@@ -7,7 +7,7 @@ yaml-files:
 
 # Ignore test YAML files as auto generated
 ignore: |
-  /gitHub/workspace/test/
+  /github/workspace/test/
   /test/
 
 rules:
