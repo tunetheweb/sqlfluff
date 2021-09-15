@@ -4,7 +4,7 @@
   "IgnoreDefaults": false,
   "SpacesAftertabs": false,
   "NoColor": false,
-  "Exclude": ["/test/", "/github/workspace/test/"],
+  "Exclude": ["\/test\/"],
   "AllowedContentTypes": [],
   "PassedFiles": [],
   "Disable": {
