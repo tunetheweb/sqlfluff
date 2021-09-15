@@ -20,5 +20,6 @@ indent_size = 4
 indent_style = unset
 trim_trailing_whitespace = unset
 
+# Often doesn't work for nested comments
 [*.rst]
-indent_size = 3
+indent_size = unset
