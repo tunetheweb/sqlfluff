@@ -5,9 +5,9 @@ yaml-files:
   - '*.yml'
   - '.yamllint'
 
-# Ignore test YAML files as auto generated
+# Ignore parser test YAML files as auto generated
 ignore: |
-  /test
+  /test/fixtures/parser
 
 rules:
   braces: enable
