@@ -18,7 +18,7 @@
 ###############
 # Rules by id #
 ###############
-# MD004: false                  # Unordered list style
+MD004: false                  # Unordered list style
 # MD007: false                  # Allow extra spaces for lists - don't cause issues and will just annoy authors
 # MD009: false                  # Allow trailing spaces - don't cause issues and will just annoy authors
 # MD013: false                  # Don't demand maximum line lengths
