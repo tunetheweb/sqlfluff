@@ -41,4 +41,3 @@ jobs:
           VALIDATE_CSS: true
           VALIDATE_JSON: true
           VALIDATE_MD: true
-          VALIDATE_ALL_CODEBASE: true
