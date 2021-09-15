@@ -1,0 +1,15 @@
+{
+    "extends": "stylelint-config-standard",
+    "rules": {
+        "comment-empty-line-before": null,
+        "length-zero-no-unit": null,
+        "no-descending-specificity": null,
+        "no-eol-whitespace": [
+            true,
+            {
+                "ignore": ["empty-lines"]
+            }
+        ],
+        "selector-list-comma-newline-after": "always"
+    }
+}
