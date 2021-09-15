@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
   schedule:
     # 2am each night
-    - cron: '* 2 * * *'
+    - cron: '00 2 * * *'
   pull_request:
 
 jobs:
@@ -53,9 +53,9 @@ jobs:
         pip install tox
     - name: Set Tox Python Param
       run: |
-        echo 'TOXENV<<EOF' >> $GITHUB_ENV
-        echo "${{ matrix.python-version }}" | sed "s/\.//" | sed "s/^/py/" >> $GITHUB_ENV
-        echo 'EOF' >> $GITHUB_ENV
+        echo 'TOXENV<<EOF' >> "$GITHUB_ENV"
+        echo "${{ matrix.python-version }}" | sed "s/\.//" | sed "s/^/py/" >> "$GITHUB_ENV"
+        echo 'EOF' >> "$GITHUB_ENV"
     - name: Run the tests
       run: |
         tox -e ${{ env.TOXENV }}
@@ -80,7 +80,7 @@ jobs:
         pip install tox
     - name: Set Tox Params
       run: |
-        echo "TOXENV=${{ matrix.jobs }}" >> $GITHUB_ENV
+        echo "TOXENV=${{ matrix.jobs }}" >> "$GITHUB_ENV"
     - name: Run the tests
       run: |
         tox -e ${{ env.TOXENV }}
