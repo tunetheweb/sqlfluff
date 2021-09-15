@@ -37,7 +37,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_BASH: true
           VALIDATE_CSS: true
-          VALIDATE_EDITORCONFIG: true
           # Not need to use Flake8 since we already check that
           # VALIDATE_PYTHON_FLAKE8: true
           VALIDATE_GITHUB_ACTIONS: true
