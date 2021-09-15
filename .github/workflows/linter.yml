@@ -2,6 +2,12 @@
 ## Linter GitHub Actions ##
 ###########################
 #
+# This uses a collection of linters in one convienent package to avoid
+# installing lots of languages and dependencies
+#
+# We still do our main Python linting in the other checks since we already
+# have python dependencies and it's working well for us there.
+#
 # Documentation: https://github.com/github/super-linter/
 #
 # Exception config files are in the .github/linters directory
@@ -26,22 +32,12 @@ jobs:
             github.event_name != 'workflow_dispatch' &&
             startsWith(github.event.pull_request.title,'Bump github/super-linter') != true
         run: |
-          echo "Temporarily running for all for testing..."
-          echo "VALIDATE_ALL_CODEBASE=true" >> "$GITHUB_ENV"
-          #echo "VALIDATE_ALL_CODEBASE=false" >> $GITHUB_ENV
+          echo "VALIDATE_ALL_CODEBASE=true" >> $GITHUB_ENV
       - name: Lint Code Base
         uses: github/super-linter@v4
-        #uses: docker://github/super-linter:v4
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_BASH: true
           VALIDATE_CSS: true
-          # Not need to use Flake8 since we already check that
-          # VALIDATE_PYTHON_FLAKE8: true
-          VALIDATE_GITHUB_ACTIONS: true
-          VALIDATE_HTML: true
-          VALIDATE_JAVASCRIPT_ES: true
           VALIDATE_JSON: true
           VALIDATE_MD: true
-          VALIDATE_YAML: true
