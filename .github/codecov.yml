@@ -1,6 +1,5 @@
 # Configuration file for codecov.io
 # https://docs.codecov.io/docs/codecovyml-reference
-
 codecov:
   branch: main
   bot: "codecov-io"
