@@ -3,7 +3,6 @@
 This is based on postgres dialect, since it was initially based off of Postgres 8.
 We should monitor in future and see if it should be rebased off of ANSI
 """
-
 from sqlfluff.core.parser import (
     OneOf,
     AnyNumberOf,
@@ -17,18 +16,16 @@ from sqlfluff.core.parser import (
     Nothing,
     OptionallyBracketed,
 )
-
 from sqlfluff.core.dialects import load_raw_dialect
-
 from sqlfluff.dialects.dialect_redshift_keywords import (
     redshift_reserved_keywords,
     redshift_unreserved_keywords,
 )
-
+from sqlfluff.dialects import dialect_postgres as postgres
+from sqlfluff.dialects import dialect_ansi as ansi
 
 postgres_dialect = load_raw_dialect("postgres")
 ansi_dialect = load_raw_dialect("ansi")
-
 redshift_dialect = postgres_dialect.copy_as("redshift")
 
 # Set Keywords
@@ -45,12 +42,282 @@ redshift_dialect.sets("reserved_keywords").update(
 redshift_dialect.sets("bare_functions").clear()
 redshift_dialect.sets("bare_functions").update(["current_date", "sysdate"])
 
-redshift_dialect.sets("date_part_function_name").update(["DATEADD", "DATEDIFF"])
+redshift_dialect.sets("date_part_function_name").update(
+    ["DATEADD", "DATEDIFF", "EXTRACT", "DATE_PART"]
+)
 
-redshift_dialect.replace(WellKnownTextGeometrySegment=Nothing())
+# Add datetime units
+# https://docs.aws.amazon.com/redshift/latest/dg/r_Dateparts_for_datetime_functions.html
+redshift_dialect.sets("datetime_units").update(
+    [
+        # millenium
+        "MILLENNIUM",
+        "MILLENNIA",
+        "MIL",
+        "MILS",
+        # century
+        "CENTURY",
+        "CENTURIES",
+        "C",
+        "CENT",
+        "CENTS",
+        # decade
+        "DECADE",
+        "DECADES",
+        "DEC",
+        "DECS",
+        # epoch
+        "EPOCH",
+        # year
+        "YEAR",
+        "YEARS",
+        "Y",
+        "YR",
+        "YRS",
+        # quarter
+        "QUARTER",
+        "QUARTERS",
+        "QTR",
+        "QTRS",
+        # month
+        "MONTH",
+        "MONTHS",
+        "MON",
+        "MONS",
+        # week
+        "WEEK",
+        "WEEKS",
+        "W",
+        # day of week
+        "DAYOFWEEK",
+        "DOW",
+        "DW",
+        "WEEKDAY",
+        # day of year
+        "DAYOFYEAR",
+        "DOY",
+        "DY",
+        "YEARDAY",
+        # day
+        "DAY",
+        "DAYS",
+        "D",
+        # hour
+        "HOUR",
+        "HOURS",
+        "H",
+        "HR",
+        "HRS",
+        # minute
+        "MINUTE",
+        "MINUTES",
+        "M",
+        "MIN",
+        "MINS",
+        # second
+        "SECOND",
+        "SECONDS",
+        "S",
+        "SEC",
+        "SECS",
+        # millisec
+        "MILLISECOND",
+        "MILLISECONDS",
+        "MS",
+        "MSEC",
+        "MSECS",
+        "MSECOND",
+        "MSECONDS",
+        "MILLISEC",
+        "MILLISECS",
+        "MILLISECON",
+        # microsec
+        "MICROSECOND",
+        "MICROSECONDS",
+        "MICROSEC",
+        "MICROSECS",
+        "MICROSECOND",
+        "USECOND",
+        "USECONDS",
+        "US",
+        "USEC",
+        "USECS",
+        # timezone
+        "TIMEZONE",
+        "TIMEZONE_HOUR",
+        "TIMEZONE_MINUTE",
+    ]
+)
+
+redshift_dialect.replace(
+    WellKnownTextGeometrySegment=Nothing(),
+    JoinLikeClauseGrammar=Sequence(
+        AnySetOf(
+            Ref("FromPivotExpressionSegment"),
+            Ref("FromUnpivotExpressionSegment"),
+            min_times=1,
+        ),
+        Ref("AliasExpressionSegment", optional=True),
+    ),
+    ColumnReferenceSegment=Delimited(
+        Sequence(
+            ansi.ColumnReferenceSegment,
+            AnyNumberOf(Ref("ArrayAccessorSegment")),
+        ),
+        delimiter=OneOf(
+            Ref("DotSegment"), Sequence(Ref("DotSegment"), Ref("DotSegment"))
+        ),
+        terminator=OneOf(
+            "ON",
+            "AS",
+            "USING",
+            Ref("CommaSegment"),
+            Ref("CastOperatorSegment"),
+            Ref("BinaryOperatorGrammar"),
+            Ref("ColonSegment"),
+            Ref("DelimiterGrammar"),
+            Ref("JoinLikeClauseGrammar"),
+        ),
+        allow_gaps=False,
+    ),
+)
 
 
-@redshift_dialect.segment(replace=True)
+# Inherit from the Postgres ObjectReferenceSegment this way so we can inherit
+# other segment types from it.
+class ObjectReferenceSegment(postgres.ObjectReferenceSegment):
+    """A reference to an object."""
+
+    pass
+
+
+redshift_dialect.add(
+    CompressionTypeGrammar=OneOf(
+        "BZIP2",
+        "GZIP",
+        "LZOP",
+        "ZSTD",
+    ),
+    ArgModeGrammar=OneOf(
+        "IN",
+        "OUT",
+        "INOUT",
+    ),
+    ColumnEncodingGrammar=OneOf(
+        "RAW",
+        "AZ64",
+        "BYTEDICT",
+        "DELTA",
+        "DELTA32K",
+        "LZO",
+        "MOSTLY8",
+        "MOSTLY16",
+        "MOSTLY32",
+        "RUNLENGTH",
+        "TEXT255",
+        "TEXT32K",
+        "ZSTD",
+    ),
+    QuotaGrammar=Sequence(
+        "QUOTA",
+        OneOf(
+            Sequence(
+                Ref("NumericLiteralSegment"),
+                OneOf(
+                    "MB",
+                    "GB",
+                    "TB",
+                ),
+            ),
+            "UNLIMITED",
+        ),
+    ),
+)
+
+
+class FromUnpivotExpressionSegment(BaseSegment):
+    """An UNPIVOT expression.
+
+    See
+    https://docs.aws.amazon.com/redshift/latest/dg/r_FROM_clause-pivot-unpivot-examples.html
+    for details.
+    """
+
+    type = "from_unpivot_expression"
+    match_grammar = Sequence(
+        "UNPIVOT",
+        Sequence(
+            OneOf("INCLUDE", "EXCLUDE"),
+            "NULLS",
+            optional=True,
+        ),
+        Bracketed(
+            Sequence(
+                Ref("ColumnReferenceSegment"),
+                "FOR",
+                Ref("ColumnReferenceSegment"),
+                "IN",
+                Bracketed(
+                    Delimited(
+                        Sequence(
+                            Ref("ColumnReferenceSegment"),
+                            Ref("AliasExpressionSegment", optional=True),
+                        )
+                    ),
+                ),
+            ),
+        ),
+    )
+
+
+class FromPivotExpressionSegment(BaseSegment):
+    """A PIVOT expression.
+
+    See
+    https://docs.aws.amazon.com/redshift/latest/dg/r_FROM_clause-pivot-unpivot-examples.html
+    for details.
+    """
+
+    type = "from_pivot_expression"
+    match_grammar = Sequence(
+        "PIVOT",
+        Bracketed(
+            Sequence(
+                OptionallyBracketed(Ref("FunctionSegment")),
+                Ref("AliasExpressionSegment", optional=True),
+                "FOR",
+                Ref("ColumnReferenceSegment"),
+                "IN",
+                Bracketed(
+                    Delimited(
+                        Sequence(
+                            Ref("ExpressionSegment"),
+                            Ref("AliasExpressionSegment", optional=True),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
+
+
+class DateTimeTypeIdentifier(BaseSegment):
+    """A Date Time type."""
+
+    type = "datetime_type_identifier"
+    match_grammar = OneOf(
+        "DATE",
+        "DATETIME",
+        Sequence(
+            OneOf("TIME", "TIMESTAMP"),
+            Sequence(OneOf("WITH", "WITHOUT"), "TIME", "ZONE", optional=True),
+        ),
+        OneOf("TIMETZ", "TIMESTAMPTZ"),
+        # INTERVAL types are not Datetime types under Redshift:
+        # https://docs.aws.amazon.com/redshift/latest/dg/r_Datetime_types.html
+    )
+
+
 class DatatypeSegment(BaseSegment):
     """A data type segment.
 
@@ -104,13 +371,7 @@ class DatatypeSegment(BaseSegment):
             "BPCHAR",
             "TEXT",
         ),
-        # datetime types
-        "DATE",
-        Sequence(
-            OneOf("TIME", "TIMESTAMP"),
-            Sequence(OneOf("WITH", "WITHOUT"), "TIME", "ZONE", optional=True),
-        ),
-        OneOf("TIMETZ", "TIMESTAMPTZ"),
+        Ref("DateTimeTypeIdentifier"),
         # INTERVAL is a data type *only* for conversion operations
         "INTERVAL",
         # boolean types
@@ -137,55 +398,6 @@ class DatatypeSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
-class ColumnEncodingSegment(BaseSegment):
-    """ColumnEncoding segment.
-
-    Indicates column compression encoding.
-
-    As specified by:
-    https://docs.aws.amazon.com/redshift/latest/dg/c_Compression_encodings.html
-    """
-
-    type = "column_encoding_segment"
-
-    match_grammar = OneOf(
-        "RAW",
-        "AZ64",
-        "BYTEDICT",
-        "DELTA",
-        "DELTA32K",
-        "LZO",
-        "MOSTLY8",
-        "MOSTLY16",
-        "MOSTLY32",
-        "RUNLENGTH",
-        "TEXT255",
-        "TEXT32K",
-        "ZSTD",
-    )
-
-
-@redshift_dialect.segment()
-class CompressionTypeSegment(BaseSegment):
-    """Compression type segment.
-
-    Indicates file compression type.
-
-    https://docs.aws.amazon.com/redshift/latest/dg/copy-parameters-file-compression.html # noqa
-    """
-
-    type = "compression_type_segment"
-
-    match_grammar = OneOf(
-        "BZIP2",
-        "GZIP",
-        "LZOP",
-        "ZSTD",
-    )
-
-
-@redshift_dialect.segment()
 class DataFormatSegment(BaseSegment):
     """DataFormat segment.
 
@@ -237,7 +449,6 @@ class DataFormatSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
 class AuthorizationSegment(BaseSegment):
     """Authorization segment.
 
@@ -248,7 +459,7 @@ class AuthorizationSegment(BaseSegment):
 
     type = "authorization_segment"
 
-    match_grammar = AnyNumberOf(
+    match_grammar = AnySetOf(
         OneOf(
             Sequence(
                 "IAM_ROLE",
@@ -289,7 +500,6 @@ class AuthorizationSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
 class ColumnAttributeSegment(BaseSegment):
     """Redshift specific column attributes.
 
@@ -299,7 +509,7 @@ class ColumnAttributeSegment(BaseSegment):
 
     type = "column_attribute_segment"
 
-    match_grammar = AnyNumberOf(
+    match_grammar = AnySetOf(
         Sequence("DEFAULT", Ref("ExpressionSegment")),
         Sequence(
             "IDENTITY",
@@ -313,14 +523,13 @@ class ColumnAttributeSegment(BaseSegment):
             "IDENTITY",
             Bracketed(Delimited(Ref("NumericLiteralSegment"))),
         ),
-        Sequence("ENCODE", Ref("ColumnEncodingSegment")),
+        Sequence("ENCODE", Ref("ColumnEncodingGrammar")),
         "DISTKEY",
         "SORTKEY",
         Sequence("COLLATE", OneOf("CASE_SENSITIVE", "CASE_INSENSITIVE")),
     )
 
 
-@redshift_dialect.segment(replace=True)
 class ColumnConstraintSegment(BaseSegment):
     """Redshift specific column constraints.
 
@@ -330,7 +539,7 @@ class ColumnConstraintSegment(BaseSegment):
 
     type = "column_constraint_segment"
 
-    match_grammar = AnyNumberOf(
+    match_grammar = AnySetOf(
         OneOf(Sequence("NOT", "NULL"), "NULL"),
         OneOf("UNIQUE", Sequence("PRIMARY", "KEY")),
         Sequence(
@@ -341,7 +550,6 @@ class ColumnConstraintSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
 class TableAttributeSegment(BaseSegment):
     """Redshift specific table attributes.
 
@@ -349,9 +557,9 @@ class TableAttributeSegment(BaseSegment):
     https://docs.aws.amazon.com/redshift/latest/dg/r_CREATE_TABLE_NEW.html
     """
 
-    type = "table_constraint_segment"
+    type = "table_constraint"
 
-    match_grammar = AnyNumberOf(
+    match_grammar = AnySetOf(
         Sequence("DISTSTYLE", OneOf("AUTO", "EVEN", "KEY", "ALL"), optional=True),
         Sequence("DISTKEY", Bracketed(Ref("ColumnReferenceSegment")), optional=True),
         OneOf(
@@ -367,7 +575,6 @@ class TableAttributeSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment(replace=True)
 class TableConstraintSegment(BaseSegment):
     """Redshift specific table constraints.
 
@@ -375,9 +582,9 @@ class TableConstraintSegment(BaseSegment):
     https://docs.aws.amazon.com/redshift/latest/dg/r_CREATE_TABLE_NEW.html
     """
 
-    type = "table_constraint_segment"
+    type = "table_constraint"
 
-    match_grammar = AnyNumberOf(
+    match_grammar = AnySetOf(
         Sequence("UNIQUE", Bracketed(Delimited(Ref("ColumnReferenceSegment")))),
         Sequence(
             "PRIMARY",
@@ -395,7 +602,6 @@ class TableConstraintSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment(replace=True)
 class LikeOptionSegment(BaseSegment):
     """Like Option Segment.
 
@@ -408,7 +614,6 @@ class LikeOptionSegment(BaseSegment):
     match_grammar = Sequence(OneOf("INCLUDING", "EXCLUDING"), "DEFAULTS")
 
 
-@redshift_dialect.segment(replace=True)
 class CreateTableStatementSegment(BaseSegment):
     """A `CREATE TABLE` statement.
 
@@ -432,8 +637,11 @@ class CreateTableStatementSegment(BaseSegment):
                     Sequence(
                         Ref("ColumnReferenceSegment"),
                         Ref("DatatypeSegment"),
-                        AnyNumberOf(Ref("ColumnAttributeSegment"), optional=True),
-                        AnyNumberOf(Ref("ColumnConstraintSegment"), optional=True),
+                        AnyNumberOf(
+                            Ref("ColumnAttributeSegment"),
+                            Ref("ColumnConstraintSegment"),
+                            optional=True,
+                        ),
                     ),
                     Ref("TableConstraintSegment", optional=True),
                 ),
@@ -449,7 +657,6 @@ class CreateTableStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment(replace=True)
 class CreateTableAsStatementSegment(BaseSegment):
     """A `CREATE TABLE AS` statement.
 
@@ -480,7 +687,6 @@ class CreateTableAsStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment(replace=True)
 class CreateModelStatementSegment(BaseSegment):
     """A `CREATE MODEL` statement.
 
@@ -618,8 +824,7 @@ class CreateModelStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
-class ShowModelSegment(BaseSegment):
+class ShowModelStatementSegment(BaseSegment):
     """A `SHOW MODEL` statement.
 
     As specified in: https://docs.aws.amazon.com/redshift/latest/dg/r_SHOW_MODEL.html
@@ -637,7 +842,6 @@ class ShowModelSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
 class CreateExternalTableStatementSegment(BaseSegment):
     """A `CREATE EXTERNAL TABLE` statement.
 
@@ -725,7 +929,6 @@ class CreateExternalTableStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
 class CreateExternalTableAsStatementSegment(BaseSegment):
     """A `CREATE EXTERNAL TABLE AS` statement.
 
@@ -774,7 +977,53 @@ class CreateExternalTableAsStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
+class CreateExternalSchemaStatementSegment(BaseSegment):
+    """A `CREATE EXTERNAL SCHEMA` statement.
+
+    https://docs.aws.amazon.com/redshift/latest/dg/r_CREATE_EXTERNAL_SCHEMA.html
+    """
+
+    type = "create_external_schema_statement"
+
+    match_grammar = Sequence(
+        "CREATE",
+        "EXTERNAL",
+        "SCHEMA",
+        Ref("IfNotExistsGrammar", optional=True),
+        Ref("SchemaReferenceSegment"),
+        "FROM",
+        OneOf(
+            Sequence("DATA", "CATALOG"),
+            Sequence("HIVE", "METASTORE"),
+            "POSTGRES",
+            "MYSQL",
+            "KINESIS",
+            "REDSHIFT",
+        ),
+        AnySetOf(
+            Sequence("DATABASE", Ref("QuotedLiteralSegment")),
+            Sequence("REGION", Ref("QuotedLiteralSegment")),
+            Sequence("SCHEMA", Ref("QuotedLiteralSegment")),
+            Sequence(
+                "URI",
+                Ref("QuotedLiteralSegment"),
+                Sequence("PORT", Ref("NumericLiteralSegment"), optional=True),
+            ),
+            Sequence(
+                "IAM_ROLE",
+                OneOf(
+                    "DEFAULT",
+                    Ref("QuotedLiteralSegment"),
+                ),
+            ),
+            Sequence("SECRET_ARN", Ref("QuotedLiteralSegment")),
+            Sequence("CATALOG_ROLE", Ref("QuotedLiteralSegment")),
+            Sequence("CREATE", "EXTERNAL", "DATABASE", "IF", "NOT", "EXISTS"),
+            optional=True,
+        ),
+    )
+
+
 class CreateLibraryStatementSegment(BaseSegment):
     """A `CREATE LIBRARY` statement.
 
@@ -796,7 +1045,7 @@ class CreateLibraryStatementSegment(BaseSegment):
         "PLPYTHONU",
         "FROM",
         Ref("QuotedLiteralSegment"),
-        AnyNumberOf(
+        AnySetOf(
             Ref("AuthorizationSegment", optional=False),
             Sequence(
                 "REGION",
@@ -808,7 +1057,6 @@ class CreateLibraryStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
 class UnloadStatementSegment(BaseSegment):
     """A `UNLOAD` statement.
 
@@ -822,7 +1070,7 @@ class UnloadStatementSegment(BaseSegment):
         Bracketed(Ref("QuotedLiteralSegment")),
         "TO",
         Ref("QuotedLiteralSegment"),
-        AnyNumberOf(
+        AnySetOf(
             Ref("AuthorizationSegment", optional=False),
             Sequence(
                 "REGION",
@@ -830,7 +1078,7 @@ class UnloadStatementSegment(BaseSegment):
                 Ref("QuotedLiteralSegment"),
                 optional=True,
             ),
-            Ref("CompressionTypeSegment", optional=True),
+            Ref("CompressionTypeGrammar", optional=True),
             Sequence(
                 Sequence(
                     "FORMAT",
@@ -892,7 +1140,7 @@ class UnloadStatementSegment(BaseSegment):
                 Ref("QuotedLiteralSegment"),
                 optional=True,
             ),
-            AnyNumberOf(
+            AnySetOf(
                 OneOf(
                     "MAXFILESIZE",
                     "ROWGROUPSIZE",
@@ -919,8 +1167,7 @@ class UnloadStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment(replace=True)
-class CopyStatementSegment(BaseSegment):
+class CopyStatementSegment(postgres.CopyStatementSegment):
     """A `COPY` statement.
 
     :
@@ -936,7 +1183,7 @@ class CopyStatementSegment(BaseSegment):
         Ref("BracketedColumnReferenceListGrammar", optional=True),
         "FROM",
         Ref("QuotedLiteralSegment"),
-        AnyNumberOf(
+        AnySetOf(
             Ref("AuthorizationSegment", optional=False),
             Sequence(
                 "REGION",
@@ -944,7 +1191,7 @@ class CopyStatementSegment(BaseSegment):
                 Ref("QuotedLiteralSegment"),
                 optional=True,
             ),
-            Ref("CompressionTypeSegment", optional=True),
+            Ref("CompressionTypeGrammar", optional=True),
             Ref("DataFormatSegment", optional=True),
             OneOf(
                 Sequence(
@@ -1004,7 +1251,7 @@ class CopyStatementSegment(BaseSegment):
             Sequence(
                 "ACCEPTINVCHARS",
                 Ref.keyword("AS", optional=True),
-                Ref("QuotedLiteralSegment"),
+                Ref("QuotedLiteralSegment", optional=True),
                 optional=True,
             ),
             Ref.keyword("BLANKSASNULL", optional=True),
@@ -1036,7 +1283,7 @@ class CopyStatementSegment(BaseSegment):
             Sequence(
                 "IGNOREHEADER",
                 Ref.keyword("AS", optional=True),
-                Ref("QuotedLiteralSegment"),
+                Ref("LiteralGrammar"),
                 optional=True,
             ),
             Sequence(
@@ -1069,7 +1316,6 @@ class CopyStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment(replace=True)
 class InsertStatementSegment(BaseSegment):
     """An`INSERT` statement.
 
@@ -1100,7 +1346,6 @@ class InsertStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment(replace=True)
 class CreateSchemaStatementSegment(BaseSegment):
     """A `CREATE SCHEMA` statement.
 
@@ -1127,25 +1372,108 @@ class CreateSchemaStatementSegment(BaseSegment):
                 Ref("ObjectReferenceSegment"),
             ),
         ),
-        Sequence(
-            "QUOTA",
-            OneOf(
-                Sequence(
-                    Ref("NumericLiteralSegment"),
-                    OneOf(
-                        "MB",
-                        "GB",
-                        "TB",
+        Ref("QuotaGrammar", optional=True),
+    )
+
+
+class ProcedureParameterListSegment(BaseSegment):
+    """The parameters for a procedure.
+
+    https://docs.aws.amazon.com/redshift/latest/dg/r_CREATE_PROCEDURE.html
+    """
+
+    type = "procedure_parameter_list"
+    # Odd syntax, but prevents eager parameters being confused for data types
+    _param_type = OneOf("REFCURSOR", Ref("DatatypeSegment"))
+    match_grammar = Bracketed(
+        Delimited(
+            Sequence(
+                AnyNumberOf(
+                    Ref(
+                        "ParameterNameSegment",
+                        exclude=OneOf(_param_type, Ref("ArgModeGrammar")),
+                        optional=True,
                     ),
+                    Ref("ArgModeGrammar", optional=True),
+                    max_times_per_element=1,
                 ),
-                "UNLIMITED",
+                _param_type,
             ),
             optional=True,
         ),
     )
 
 
-@redshift_dialect.segment()
+class CreateProcedureStatementSegment(BaseSegment):
+    """A `CREATE PROCEDURE` statement.
+
+    https://www.postgresql.org/docs/14/sql-createprocedure.html
+
+    TODO: Just a basic statement for now, without full syntax.
+    based on CreateFunctionStatementSegment without a return type.
+    """
+
+    type = "create_procedure_statement"
+
+    match_grammar = Sequence(
+        "CREATE",
+        Sequence("OR", "REPLACE", optional=True),
+        "PROCEDURE",
+        Ref("FunctionNameSegment"),
+        Ref("ProcedureParameterListSegment"),
+        Ref("FunctionDefinitionGrammar"),
+    )
+
+
+class AlterProcedureStatementSegment(BaseSegment):
+    """An `ALTER PROCEDURE` statement.
+
+    https://docs.aws.amazon.com/redshift/latest/dg/r_ALTER_PROCEDURE.html
+    """
+
+    type = "alter_procedure_statement"
+
+    match_grammar = Sequence(
+        "ALTER",
+        "PROCEDURE",
+        Ref("FunctionNameSegment"),
+        Ref("ProcedureParameterListSegment", optional=True),
+        OneOf(
+            Sequence("RENAME", "TO", Ref("FunctionNameSegment")),
+            Sequence(
+                "OWNER",
+                "TO",
+                OneOf(
+                    OneOf(Ref("ParameterNameSegment"), Ref("QuotedIdentifierSegment")),
+                    "CURRENT_USER",
+                    "SESSION_USER",
+                ),
+            ),
+        ),
+    )
+
+
+class DropProcedureStatementSegment(BaseSegment):
+    """An `DROP PROCEDURE` statement.
+
+    https://docs.aws.amazon.com/redshift/latest/dg/r_DROP_PROCEDURE.html
+    """
+
+    type = "drop_procedure_statement"
+
+    match_grammar = Sequence(
+        "DROP",
+        "PROCEDURE",
+        Ref("IfExistsGrammar", optional=True),
+        Delimited(
+            Sequence(
+                Ref("FunctionNameSegment"),
+                Ref("ProcedureParameterListSegment", optional=True),
+            ),
+        ),
+    )
+
+
 class DeclareStatementSegment(BaseSegment):
     """A `DECLARE` statement.
 
@@ -1163,7 +1491,6 @@ class DeclareStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
 class FetchStatementSegment(BaseSegment):
     """A `FETCH` statement.
 
@@ -1190,7 +1517,6 @@ class FetchStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
 class CloseStatementSegment(BaseSegment):
     """A `CLOSE` statement.
 
@@ -1205,7 +1531,6 @@ class CloseStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
 class AltereDatashareStatementSegment(BaseSegment):
     """An `ALTER DATASHARE` statement.
 
@@ -1269,7 +1594,6 @@ class AltereDatashareStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
 class CreateDatashareStatementSegment(BaseSegment):
     """A `CREATE DATASHARE` statement.
 
@@ -1294,7 +1618,6 @@ class CreateDatashareStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
 class DescDatashareStatementSegment(BaseSegment):
     """A `DESC DATASHARE` statement.
 
@@ -1320,7 +1643,6 @@ class DescDatashareStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
 class DropDatashareStatementSegment(BaseSegment):
     """A `DROP DATASHARE` statement.
 
@@ -1335,7 +1657,6 @@ class DropDatashareStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
 class ShowDatasharesStatementSegment(BaseSegment):
     """A `SHOW DATASHARES` statement.
 
@@ -1354,7 +1675,6 @@ class ShowDatasharesStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
 class AnalyzeCompressionStatementSegment(BaseSegment):
     """An `ANALYZE COMPRESSION` statement.
 
@@ -1383,7 +1703,6 @@ class AnalyzeCompressionStatementSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
 class VacuumStatementSegment(BaseSegment):
     """A `VACUUM` statement.
 
@@ -1418,32 +1737,25 @@ class VacuumStatementSegment(BaseSegment):
 
 
 # Adding Redshift specific statements
-@redshift_dialect.segment(replace=True)
-class StatementSegment(BaseSegment):
+class StatementSegment(postgres.StatementSegment):
     """A generic segment, to any of its child subsegments."""
 
     type = "statement"
 
-    parse_grammar = redshift_dialect.get_segment("StatementSegment").parse_grammar.copy(
+    match_grammar = postgres.StatementSegment.match_grammar
+    parse_grammar = postgres.StatementSegment.parse_grammar.copy(
         insert=[
-            Ref("TableAttributeSegment"),
-            Ref("ColumnAttributeSegment"),
-            Ref("ColumnEncodingSegment"),
-            Ref("AuthorizationSegment"),
             Ref("CreateLibraryStatementSegment"),
-            Ref("CreateUserSegment"),
-            Ref("CreateGroupSegment"),
-            Ref("AlterUserSegment"),
-            Ref("AlterGroupSegment"),
+            Ref("CreateGroupStatementSegment"),
+            Ref("AlterUserStatementSegment"),
+            Ref("AlterGroupStatementSegment"),
             Ref("CreateExternalTableAsStatementSegment"),
             Ref("CreateExternalTableStatementSegment"),
-            Ref("PartitionedBySegment"),
-            Ref("RowFormatDelimitedSegment"),
+            Ref("CreateExternalSchemaStatementSegment"),
             Ref("DataFormatSegment"),
-            Ref("CompressionTypeSegment"),
             Ref("UnloadStatementSegment"),
             Ref("CopyStatementSegment"),
-            Ref("ShowModelSegment"),
+            Ref("ShowModelStatementSegment"),
             Ref("CreateDatashareStatementSegment"),
             Ref("DescDatashareStatementSegment"),
             Ref("DropDatashareStatementSegment"),
@@ -1454,15 +1766,11 @@ class StatementSegment(BaseSegment):
             Ref("CloseStatementSegment"),
             Ref("AnalyzeCompressionStatementSegment"),
             Ref("VacuumStatementSegment"),
+            Ref("AlterProcedureStatementSegment"),
         ],
     )
 
-    match_grammar = redshift_dialect.get_segment(
-        "StatementSegment"
-    ).match_grammar.copy()
 
-
-@redshift_dialect.segment()
 class PartitionedBySegment(BaseSegment):
     """Partitioned By Segment.
 
@@ -1479,14 +1787,13 @@ class PartitionedBySegment(BaseSegment):
             Delimited(
                 Sequence(
                     Ref("ColumnReferenceSegment"),
-                    Ref("DatatypeSegment"),
+                    Ref("DatatypeSegment", optional=True),
                 ),
             ),
         ),
     )
 
 
-@redshift_dialect.segment()
 class RowFormatDelimitedSegment(BaseSegment):
     """Row Format Delimited Segment.
 
@@ -1513,23 +1820,20 @@ class RowFormatDelimitedSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
-class CreateUserSegment(BaseSegment):
+class CreateUserStatementSegment(ansi.CreateUserStatementSegment):
     """`CREATE USER` statement.
 
     https://docs.aws.amazon.com/redshift/latest/dg/r_CREATE_USER.html
     """
 
-    type = "create_user"
-
     match_grammar = Sequence(
         "CREATE",
         "USER",
-        Ref("ObjectReferenceSegment"),
+        Ref("RoleReferenceSegment"),
         Ref.keyword("WITH", optional=True),
         "PASSWORD",
         OneOf(Ref("QuotedLiteralSegment"), "DISABLE"),
-        AnyNumberOf(
+        AnySetOf(
             OneOf(
                 "CREATEDB",
                 "NOCREATEDB",
@@ -1565,8 +1869,7 @@ class CreateUserSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
-class CreateGroupSegment(BaseSegment):
+class CreateGroupStatementSegment(BaseSegment):
     """`CREATE GROUP` statement.
 
     https://docs.aws.amazon.com/redshift/latest/dg/r_CREATE_GROUP.html
@@ -1589,21 +1892,20 @@ class CreateGroupSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
-class AlterUserSegment(BaseSegment):
+class AlterUserStatementSegment(BaseSegment):
     """`ALTER USER` statement.
 
     https://docs.aws.amazon.com/redshift/latest/dg/r_ALTER_USER.html
     """
 
-    type = "alter_user"
+    type = "alter_user_statement"
 
     match_grammar = Sequence(
         "ALTER",
         "USER",
-        Ref("ObjectReferenceSegment"),
+        Ref("RoleReferenceSegment"),
         Ref.keyword("WITH", optional=True),
-        AnyNumberOf(
+        AnySetOf(
             OneOf(
                 "CREATEDB",
                 "NOCREATEDB",
@@ -1676,8 +1978,7 @@ class AlterUserSegment(BaseSegment):
     )
 
 
-@redshift_dialect.segment()
-class AlterGroupSegment(BaseSegment):
+class AlterGroupStatementSegment(BaseSegment):
     """`ALTER GROUP` statement.
 
     https://docs.aws.amazon.com/redshift/latest/dg/r_ALTER_GROUP.html
@@ -1702,5 +2003,61 @@ class AlterGroupSegment(BaseSegment):
                 "TO",
                 Ref("ObjectReferenceSegment"),
             ),
+        ),
+    )
+
+
+class TransactionStatementSegment(BaseSegment):
+    """A `BEGIN|START`, `COMMIT|END` or `ROLLBACK|ABORT` transaction statement.
+
+    https://docs.aws.amazon.com/redshift/latest/dg/r_BEGIN.html
+    """
+
+    type = "transaction_statement"
+    match_grammar = Sequence(
+        OneOf("BEGIN", "START", "COMMIT", "END", "ROLLBACK", "ABORT"),
+        OneOf("TRANSACTION", "WORK", optional=True),
+        Sequence(
+            "ISOLATION",
+            "LEVEL",
+            OneOf(
+                "SERIALIZABLE",
+                Sequence("READ", "COMMITTED"),
+                Sequence("READ", "UNCOMMITTED"),
+                Sequence("REPEATABLE", "READ"),
+            ),
+            optional=True,
+        ),
+        OneOf(
+            Sequence("READ", "ONLY"),
+            Sequence("READ", "WRITE"),
+            optional=True,
+        ),
+    )
+
+
+class AlterSchemaStatementSegment(BaseSegment):
+    """An `ALTER SCHEMA` statement.
+
+    https://docs.aws.amazon.com/redshift/latest/dg/r_ALTER_SCHEMA.html
+    """
+
+    type = "alter_schema_statement"
+    match_grammar = Sequence(
+        "ALTER",
+        "SCHEMA",
+        Ref("SchemaReferenceSegment"),
+        OneOf(
+            Sequence(
+                "RENAME",
+                "TO",
+                Ref("SchemaReferenceSegment"),
+            ),
+            Sequence(
+                "OWNER",
+                "TO",
+                Ref("RoleReferenceSegment"),
+            ),
+            Ref("QuotaGrammar"),
         ),
     )

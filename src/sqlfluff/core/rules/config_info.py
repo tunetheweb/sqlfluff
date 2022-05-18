@@ -27,6 +27,13 @@ STANDARD_CONFIG_INFO_DICT = {
         "validation": ["space", "tab"],
         "definition": "Whether to use tabs or spaces to add new indents.",
     },
+    "hanging_indents": {
+        "validation": [True, False],
+        "definition": (
+            "Whether hanging indents will be considered when evaluting the "
+            "indentation of a file."
+        ),
+    },
     "comma_style": {
         "validation": ["leading", "trailing"],
         "definition": "The comma style to enforce.",
@@ -81,8 +88,24 @@ STANDARD_CONFIG_INFO_DICT = {
             " be ignored when linting line lengths?"
         ),
     },
+    "ignore_comment_clauses": {
+        "validation": [True, False],
+        "definition": (
+            "Should comment clauses (e.g. column comments) be ignored"
+            " when linting line lengths?"
+        ),
+    },
     "ignore_words": {
         "definition": ("Comma separated list of words to ignore from rule"),
+    },
+    "ignore_words_regex": {
+        "definition": (
+            "Words to ignore from rule if they are a partial match for the regular "
+            "expression. To ignore only full matches you can use ``^`` (beginning "
+            "of text) and ``$`` (end of text). Due to regular expression operator "
+            "precedence, it is good practice to use parentheses around everything "
+            "between ``^`` and ``$``."
+        ),
     },
     "forbid_subquery_in": {
         "validation": ["join", "from", "both"],
@@ -105,6 +128,10 @@ STANDARD_CONFIG_INFO_DICT = {
         "definition": (
             "Should alias have an explict AS or is implicit aliasing required?"
         ),
+    },
+    "fully_qualify_join_types": {
+        "validation": ["inner", "outer", "both"],
+        "definition": ("Which types of JOIN clauses should be fully qualified?"),
     },
     "multiline_newline": {
         "validation": [True, False],
@@ -148,6 +175,14 @@ STANDARD_CONFIG_INFO_DICT = {
         "definition": (
             "Optional, comma-separated list of blocked words which should not be used "
             "in statements."
+        ),
+    },
+    "preferred_quoted_literal_style": {
+        "validation": ["consistent", "single_quotes", "double_quotes"],
+        "definition": (
+            "Preferred quoting style to use for the quoted literals. If set to "
+            "``consistent`` quoting style is derived from the first quoted literal"
+            "in the file."
         ),
     },
 }

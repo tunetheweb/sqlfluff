@@ -3,7 +3,7 @@ import logging
 import os.path
 import pkgutil
 from functools import reduce
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, Generator, List, Optional, Tuple
 
 import jinja2.nodes
 from jinja2 import (
@@ -17,14 +17,14 @@ from jinja2.environment import Template
 from jinja2.sandbox import SandboxedEnvironment
 
 from sqlfluff.core.config import FluffConfig
-from sqlfluff.core.errors import SQLTemplaterError
+from sqlfluff.core.errors import SQLBaseError, SQLTemplaterError
 from sqlfluff.core.templaters.base import (
     RawFileSlice,
     TemplatedFile,
     TemplatedFileSlice,
 )
 from sqlfluff.core.templaters.python import PythonTemplater
-from sqlfluff.core.templaters.slicers.tracer import JinjaTracer
+from sqlfluff.core.templaters.slicers.tracer import JinjaAnalyzer
 
 
 # Instantiate the templater logger
@@ -78,9 +78,17 @@ class JinjaTemplater(PythonTemplater):
                 with open(path_entry) as opened_file:
                     template = opened_file.read()
                 # Update the context with macros from the file.
-                macro_ctx.update(
-                    cls._extract_macros_from_template(template, env=env, ctx=ctx)
-                )
+                try:
+                    macro_ctx.update(
+                        cls._extract_macros_from_template(template, env=env, ctx=ctx)
+                    )
+                except TemplateSyntaxError as err:
+                    raise SQLTemplaterError(
+                        f"Error in Jinja macro file {os.path.relpath(path_entry)}: "
+                        f"{err.message}",
+                        line_no=err.lineno,
+                        line_pos=1,
+                    ) from err
             else:
                 # It's a directory. Iterate through files in it and extract from them.
                 for dirpath, _, files in os.walk(path_entry):
@@ -178,28 +186,39 @@ class JinjaTemplater(PythonTemplater):
                 return self.name
 
         dbt_builtins = {
-            # `is_incremental()` renders as False, always in this case.
-            # TODO: This means we'll never parse the other part of the query,
-            # so we should find a solution to that. Perhaps forcing the file
+            "ref": lambda model_ref: model_ref,
+            "source": lambda source_name, table: f"{source_name}_{table}",
+            "config": lambda **kwargs: "",
+            "var": lambda variable, default="": "item",
+            # `is_incremental()` renders as True, always in this case.
+            # TODO: This means we'll never parse other parts of the query,
+            # that are only reachable when `is_incremental()` returns False.
+            # We should try to find a solution to that. Perhaps forcing the file
             # to be parsed TWICE if it uses this variable.
-            "is_incremental": lambda: False,
+            "is_incremental": lambda: True,
             "this": ThisEmulator(),
         }
         return dbt_builtins
 
     @classmethod
-    def _crawl_tree(cls, tree, variable_names, raw):
+    def _crawl_tree(
+        cls, tree, variable_names, raw
+    ) -> Generator[SQLTemplaterError, None, None]:
         """Crawl the tree looking for occurrences of the undeclared values."""
         # First iterate through children
         for elem in tree.iter_child_nodes():
             yield from cls._crawl_tree(elem, variable_names, raw)
         # Then assess self
-        if isinstance(tree, jinja2.nodes.Name) and tree.name in variable_names:
-            line_no = tree.lineno
+        if (
+            isinstance(tree, jinja2.nodes.Name)
+            and getattr(tree, "name") in variable_names
+        ):
+            line_no: int = getattr(tree, "lineno")
+            tree_name: str = getattr(tree, "name")
             line = raw.split("\n")[line_no - 1]
-            pos = line.index(tree.name) + 1
+            pos = line.index(tree_name) + 1
             yield SQLTemplaterError(
-                f"Undefined jinja template variable: {tree.name!r}",
+                f"Undefined jinja template variable: {tree_name!r}",
                 line_no=line_no,
                 line_pos=pos,
             )
@@ -316,9 +335,12 @@ class JinjaTemplater(PythonTemplater):
                 "object."
             )
 
-        env, live_context, make_template = self.template_builder(
-            fname=fname, config=config
-        )
+        try:
+            env, live_context, make_template = self.template_builder(
+                fname=fname, config=config
+            )
+        except SQLTemplaterError as err:
+            return None, [err]
 
         # Load the template, passing the global context.
         try:
@@ -336,27 +358,40 @@ class JinjaTemplater(PythonTemplater):
                 ],
             )
 
-        violations = []
+        violations: List[SQLBaseError] = []
 
         # Attempt to identify any undeclared variables. The majority
         # will be found during the _crawl_tree step rather than this
         # first Exception which serves only to catch catastrophic errors.
         try:
             syntax_tree = env.parse(in_str)
-            undefined_variables = meta.find_undeclared_variables(syntax_tree)
+            potentially_undefined_variables = meta.find_undeclared_variables(
+                syntax_tree
+            )
         except Exception as err:  # pragma: no cover
             # TODO: Add a url here so people can get more help.
             raise SQLTemplaterError(f"Failure in identifying Jinja variables: {err}.")
 
-        # Get rid of any that *are* actually defined.
-        for val in live_context:
-            if val in undefined_variables:
-                undefined_variables.remove(val)
+        undefined_variables = set()
 
-        if undefined_variables:
-            # Lets go through and find out where they are:
-            for val in self._crawl_tree(syntax_tree, undefined_variables, in_str):
-                violations.append(val)
+        class Undefined:
+            """Similar to jinja2.StrictUndefined, but remembers, not fails."""
+
+            def __init__(self, name):
+                self.name = name
+
+            def __str__(self):
+                """Treat undefined vars as empty, but remember for later."""
+                undefined_variables.add(self.name)
+                return ""
+
+            def __getattr__(self, item):
+                undefined_variables.add(self.name)
+                return Undefined(f"{self.name}.{item}")
+
+        for val in potentially_undefined_variables:
+            if val not in live_context:
+                live_context[val] = Undefined(name=val)
 
         try:
             # NB: Passing no context. Everything is loaded when the template is loaded.
@@ -368,6 +403,12 @@ class JinjaTemplater(PythonTemplater):
                 config=config,
                 make_template=make_template,
             )
+            if undefined_variables:
+                # Lets go through and find out where they are:
+                for template_err_val in self._crawl_tree(
+                    syntax_tree, undefined_variables, in_str
+                ):
+                    violations.append(template_err_val)
             return (
                 TemplatedFile(
                     source_str=in_str,
@@ -380,21 +421,20 @@ class JinjaTemplater(PythonTemplater):
             )
         except (TemplateError, TypeError) as err:
             templater_logger.info("Unrecoverable Jinja Error: %s", err)
-            violations.append(
-                SQLTemplaterError(
-                    (
-                        "Unrecoverable failure in Jinja templating: {}. Have you "
-                        "configured your variables? "
-                        "https://docs.sqlfluff.com/en/latest/configuration.html"
-                    ).format(err),
-                    # We don't have actual line number information, but specify
-                    # line 1 so users can ignore with "noqa" if they want. (The
-                    # default is line 0, which can't be ignored because it's not
-                    # a valid line number.)
-                    line_no=1,
-                    line_pos=1,
-                )
+            template_err: SQLBaseError = SQLTemplaterError(
+                (
+                    "Unrecoverable failure in Jinja templating: {}. Have you "
+                    "configured your variables? "
+                    "https://docs.sqlfluff.com/en/latest/configuration.html"
+                ).format(err),
+                # We don't have actual line number information, but specify
+                # line 1 so users can ignore with "noqa" if they want. (The
+                # default is line 0, which can't be ignored because it's not
+                # a valid line number.)
+                line_no=1,
+                line_pos=1,
             )
+            violations.append(template_err)
             return None, violations
 
     def slice_file(
@@ -413,6 +453,9 @@ class JinjaTemplater(PythonTemplater):
         templater_logger.info("Slicing File Template")
         templater_logger.debug("    Raw String: %r", raw_str)
         templater_logger.debug("    Templated String: %r", templated_str)
-        tracer = JinjaTracer(raw_str, self._get_jinja_env(), make_template)
-        trace = tracer.trace()
+        # TRICKY: Note that the templated_str parameter is not used. JinjaTracer
+        # uses make_template() to build and render the template itself.
+        analyzer = JinjaAnalyzer(raw_str, self._get_jinja_env())
+        tracer = analyzer.analyze(make_template)
+        trace = tracer.trace(append_to_templated=kwargs.pop("append_to_templated", ""))
         return trace.raw_sliced, trace.sliced_file, trace.templated_str

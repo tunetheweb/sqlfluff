@@ -80,7 +80,7 @@ event_version int,
 event_id bigint,
 event_time timestamp,
 event_type varchar(10),
-recipientaccountid bigint) 
+recipientaccountid bigint)
 row format serde 'org.openx.data.jsonserde.JsonSerDe'
 with serdeproperties (
 'dots.in.keys' = 'true',
@@ -96,8 +96,8 @@ CREATE EXTERNAL TABLE schema_spectrum_uddh.soccer_league
   league_spi  decimal(6,2),
   league_nspi smallint
 )
-ROW FORMAT DELIMITED 
-    FIELDS TERMINATED BY ',' 
+ROW FORMAT DELIMITED
+    FIELDS TERMINATED BY ','
     LINES TERMINATED BY '\n\l'
 stored as textfile
 LOCATION 's3://spectrum-uddh/league/'
@@ -109,3 +109,9 @@ STORED AS
 INPUTFORMAT 'com.amazon.ionhiveserde.formats.IonInputFormat'
 OUTPUTFORMAT 'com.amazon.ionhiveserde.formats.IonOutputFormat'
 LOCATION 's3://s3-bucket/prefix';
+
+CREATE EXTERNAL TABLE spectrum.partitioned_lineitem
+PARTITIONED BY (l_shipdate, l_shipmode)
+STORED AS parquet
+LOCATION 'S3://mybucket/cetas/partitioned_lineitem/'
+AS SELECT 1;

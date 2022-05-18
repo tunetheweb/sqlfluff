@@ -1,9 +1,12 @@
 """Implementation of Rule L046."""
 from typing import Tuple
 
-from sqlfluff.core.rules.base import BaseRule, LintResult, RuleContext
+from sqlfluff.core.rules.base import BaseRule, EvalResultType, LintResult, RuleContext
+from sqlfluff.core.rules.functional import rsp
+from sqlfluff.core.rules.doc_decorators import document_groups
 
 
+@document_groups
 class Rule_L046(BaseRule):
     """Jinja tags should have a single whitespace on either side.
 
@@ -31,6 +34,7 @@ class Rule_L046(BaseRule):
         }};
     """
 
+    groups = ("all", "core")
     targets_templated = True
 
     @staticmethod
@@ -50,39 +54,55 @@ class Rule_L046(BaseRule):
         pos = main.find(inner)
         return main[:pos], inner, main[pos + len(inner) :]
 
-    def _eval(self, context: RuleContext) -> LintResult:
+    def _eval(self, context: RuleContext) -> EvalResultType:
         """Look for non-literal segments."""
-        if not context.segment.pos_marker.is_literal():
-            # Does it actually look like a tag?
-            src_raw = context.segment.pos_marker.source_str()
-            if not src_raw or src_raw[0] != "{" or src_raw[-1] != "}":
-                return LintResult(memory=context.memory)
-
-            # Dedupe using a memory of source indexes.
-            # This is important because several positions in the
-            # templated file may refer to the same position in the
-            # source file and we only want to get one violation.
-            src_idx = context.segment.pos_marker.source_slice.start
-            if context.memory and src_idx in context.memory:
-                return LintResult(memory=context.memory)
+        assert context.segment.pos_marker
+        if context.segment.is_raw() and not context.segment.pos_marker.is_literal():
             if not context.memory:
                 memory = set()
             else:
                 memory = context.memory
-            memory.add(src_idx)
 
-            # Get the inner section
-            ws_pre, inner, ws_post = self._get_whitespace_ends(src_raw)
+            # Does it actually look like a tag?
+            templated_raw_slices = context.functional.segment.raw_slices.select(
+                rsp.is_slice_type("templated")
+            )
+            result = []
+            for raw_slice in templated_raw_slices:
+                src_raw = raw_slice.raw
+                if not src_raw or src_raw[0] != "{" or src_raw[-1] != "}":
+                    continue  # pragma: no cover
 
-            # For the following section, whitespace should be a single
-            # whitespace OR it should contain a newline.
+                # Dedupe using a memory of source indexes.
+                # This is important because several positions in the
+                # templated file may refer to the same position in the
+                # source file and we only want to get one violation.
+                src_idx = raw_slice.source_idx
+                if context.memory and src_idx in context.memory:
+                    continue
+                memory.add(src_idx)
 
-            # Check the initial whitespace.
-            if not ws_pre or (ws_pre != " " and "\n" not in ws_pre):
-                return LintResult(memory=memory, anchor=context.segment)
-            # Check latter whitespace.
-            if not ws_post or (ws_post != " " and "\n" not in ws_post):
-                return LintResult(memory=memory, anchor=context.segment)
+                # Get the inner section
+                ws_pre, inner, ws_post = self._get_whitespace_ends(src_raw)
 
-            return LintResult(memory=memory)
+                # For the following section, whitespace should be a single
+                # whitespace OR it should contain a newline.
+
+                # Check the initial whitespace.
+                if not ws_pre or (ws_pre != " " and "\n" not in ws_pre):
+                    result.append(
+                        LintResult(
+                            memory=memory,
+                            anchor=context.segment,
+                            description=f"Jinja tags should have a single "
+                            f"whitespace on either side: {src_raw}",
+                        )
+                    )
+                # Check latter whitespace.
+                elif not ws_post or (ws_post != " " and "\n" not in ws_post):
+                    result.append(LintResult(memory=memory, anchor=context.segment))
+            if result:
+                return result
+            else:
+                return LintResult(memory=memory)
         return LintResult(memory=context.memory)

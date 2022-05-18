@@ -3,7 +3,7 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: c286f099e756eed487721ebfff75b87861ead8c85234152cde5923f82f686c70
+_hash: 55a7be6a253a7a592fa0a0f18511cf58e29f9c320c62019877210a92a0f2d5a4
 file:
   batch:
   - statement:
@@ -14,11 +14,11 @@ file:
         - literal: '15600'
         - comma: ','
         - numeric_literal:
-            binary_operator: '-'
+            sign_indicator: '-'
             literal: '1'
         - comma: ','
         - numeric_literal:
-            binary_operator: '-'
+            sign_indicator: '-'
             literal: '1'
         - comma: ','
         - literal: "'mysp_CreateCustomer'"
@@ -48,5 +48,96 @@ file:
         - literal: '16'
         - comma: ','
         - literal: '1'
+        - end_bracket: )
+  - statement_terminator: ;
+  - statement:
+      raiserror_statement:
+        keyword: RAISERROR
+        bracketed:
+        - start_bracket: (
+        - literal: "N'Unicode error'"
+        - comma: ','
+        - literal: '16'
+        - comma: ','
+        - literal: '1'
+        - end_bracket: )
+  - statement_terminator: ;
+  - statement:
+      raiserror_statement:
+      - keyword: RAISERROR
+      - bracketed:
+        - start_bracket: (
+        - literal: "'WITH option'"
+        - comma: ','
+        - literal: '16'
+        - comma: ','
+        - literal: '1'
+        - end_bracket: )
+      - keyword: WITH
+      - keyword: LOG
+  - statement_terminator: ;
+  - statement:
+      raiserror_statement:
+        keyword: RAISERROR
+        bracketed:
+        - start_bracket: (
+        - literal: "'Error with lots of arguments %a %b %c %d %e %f %g %h %i %j %k\
+            \ %l %m %n %o %p %q %r %s %t'"
+        - comma: ','
+        - literal: '16'
+        - comma: ','
+        - literal: '1'
+        - comma: ','
+        - literal: "'a'"
+        - comma: ','
+        - literal: "N'b'"
+        - comma: ','
+        - parameter: '@c'
+        - comma: ','
+        - literal: '4'
+        - comma: ','
+        - literal: '5'
+        - comma: ','
+        - literal: '6'
+        - comma: ','
+        - literal: '7'
+        - comma: ','
+        - literal: '8'
+        - comma: ','
+        - literal: '9'
+        - comma: ','
+        - literal: '10'
+        - comma: ','
+        - literal: '11'
+        - comma: ','
+        - literal: '12'
+        - comma: ','
+        - literal: '13'
+        - comma: ','
+        - literal: '14'
+        - comma: ','
+        - literal: '15'
+        - comma: ','
+        - literal: '16'
+        - comma: ','
+        - literal: '17'
+        - comma: ','
+        - literal: '18'
+        - comma: ','
+        - literal: '19'
+        - comma: ','
+        - literal: '20'
+        - end_bracket: )
+  - statement_terminator: ;
+  - statement:
+      raiserror_statement:
+        keyword: RAISERROR
+        bracketed:
+        - start_bracket: (
+        - parameter: '@ErrorMessage'
+        - comma: ','
+        - parameter: '@ErrorSeverity'
+        - comma: ','
+        - parameter: '@ErrorState'
         - end_bracket: )
   - statement_terminator: ;

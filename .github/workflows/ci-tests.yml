@@ -2,8 +2,6 @@
 ## GitHub Actions CI Tests ##
 #############################
 #
-# Based on our old CircleCI config
-#
 # This can be kicked off manually in the Actions tab of GitHub
 # It will also run nightly at 2pm
 # It will run on any pull request, except non-code changes
@@ -28,9 +26,9 @@ jobs:
         jobs: [ 'linting', 'doclinting', 'docbuild', 'yamllint' ]
     name: ${{ matrix.jobs }} tests
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: '3.10'
     - name: Install dependencies
@@ -39,22 +37,6 @@ jobs:
     - name: Run the tests
       run: |
         tox -e ${{ matrix.jobs }}
-  ruleslinting:
-    runs-on: ubuntu-latest
-    name: Rules critical errors tests
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.10'
-    - name: Install dependencies
-      run: |
-        pip install tox
-        pip install .
-    - name: Run the tests
-      run: |
-        tox -e ruleslinting
   python-version-tests:
     runs-on: ubuntu-latest
     strategy:
@@ -62,22 +44,17 @@ jobs:
         python-version: [ '3.7', '3.8', '3.9', '3.10' ]
     name: Python ${{ matrix.python-version }} tests
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
         pip install tox
-    - name: Set Tox Python Param
-      run: |
-        echo 'TOXENV<<EOF' >> $GITHUB_ENV
-        echo "${{ matrix.python-version }}" | sed "s/\.//" | sed "s/^/py/" >> $GITHUB_ENV
-        echo 'EOF' >> $GITHUB_ENV
     - name: Run the tests
       run: |
-        tox -e ${{ env.TOXENV }} -- -n 2 test
+        tox -e py -- -n 2 test
     - name: Upload Coverage Report
       uses: codecov/codecov-action@v1
       with:
@@ -89,29 +66,26 @@ jobs:
         jobs: [ 'bench', 'mypy' ]
     name: ${{ matrix.jobs }} tests
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: '3.10'
     - name: Install dependencies
       run: |
         pip install tox
-    - name: Set Tox Params
-      run: |
-        echo "TOXENV=${{ matrix.jobs }}" >> $GITHUB_ENV
     - name: Run the tests
       env:
         SQLFLUFF_BENCHMARK_API_KEY: ${{ secrets.SQLFLUFF_BENCHMARK_API_KEY }}
       run: |
-        tox -e ${{ env.TOXENV }}
+        tox -e ${{ matrix.jobs }}
   examples:
     runs-on: ubuntu-latest
     name: example tests
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: '3.10'
     - name: Install dependencies
@@ -149,9 +123,9 @@ jobs:
         dbt-version: [ 'dbt020', 'dbt021', 'dbt100' ]
     name: DBT Plugin ${{ matrix.dbt-version }} tests
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: '3.8'
     - name: Install dependencies
@@ -172,9 +146,9 @@ jobs:
       run: |
         git config --global core.autocrlf false
         git config --global core.eol lf
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: '3.8'
     - name: List Env
@@ -213,9 +187,9 @@ jobs:
       run: |
         git config --global core.autocrlf false
         git config --global core.eol lf
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: '3.8'
     - name: Install dependencies
@@ -240,10 +214,10 @@ jobs:
     name: pip install tests
     steps:
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: '3.10'
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Install dependencies
       run: |
         pip install .
@@ -252,13 +226,13 @@ jobs:
         sqlfluff --version
     - name: Run a simple select parse test via stdin
       run: |
-        echo "select 1" | sqlfluff parse -
+        echo "select 1" | sqlfluff parse --dialect=ansi -
     - name: Run a simple select lint test via stdin
       run: |
-        echo "select 1" | sqlfluff lint -
+        echo "select 1" | sqlfluff lint --dialect=ansi -
     - name: Run a simple select parse test via file
       run: |
-        sqlfluff parse <(echo "select 1")
+        sqlfluff parse --dialect=ansi <(echo "select 1")
     - name: Run a simple select lint test via file
       run: |
-        sqlfluff lint <(echo "select 1")
+        sqlfluff lint --dialect=ansi <(echo "select 1")

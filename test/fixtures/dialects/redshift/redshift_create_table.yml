@@ -3,7 +3,7 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: ef248c8a9dd155928672bfed3010a1dc3d4e9479f4acc1f8c1283a46aff03c05
+_hash: 68b44f1dc3160811fce956ed1404f506eb5df7118ba75e23a9c74c596b2dcba5
 file:
 - statement:
     create_table_statement:
@@ -33,7 +33,7 @@ file:
         - keyword: NOT
         - keyword: 'NULL'
       - end_bracket: )
-    - table_constraint_segment:
+    - table_constraint:
       - keyword: DISTKEY
       - bracketed:
           start_bracket: (
@@ -84,7 +84,7 @@ file:
           - literal: '1'
           - end_bracket: )
       - end_bracket: )
-    - table_constraint_segment:
+    - table_constraint:
       - keyword: DISTKEY
       - bracketed:
           start_bracket: (
@@ -159,7 +159,7 @@ file:
             literal: '5'
             end_bracket: )
       - end_bracket: )
-    - table_constraint_segment:
+    - table_constraint:
       - keyword: DISTKEY
       - bracketed:
           start_bracket: (
@@ -214,7 +214,7 @@ file:
               identifier: col1
             end_bracket: )
       - end_bracket: )
-    - table_constraint_segment:
+    - table_constraint:
       - keyword: DISTKEY
       - bracketed:
           start_bracket: (
@@ -256,7 +256,7 @@ file:
             literal: '5'
             end_bracket: )
       - end_bracket: )
-    - table_constraint_segment:
+    - table_constraint:
       - keyword: DISTKEY
       - bracketed:
           start_bracket: (
@@ -296,7 +296,7 @@ file:
             literal: '5'
             end_bracket: )
       - end_bracket: )
-    - table_constraint_segment:
+    - table_constraint:
       - keyword: DISTKEY
       - bracketed:
           start_bracket: (
@@ -336,7 +336,7 @@ file:
             literal: '5'
             end_bracket: )
       - end_bracket: )
-    - table_constraint_segment:
+    - table_constraint:
       - keyword: DISTKEY
       - bracketed:
           start_bracket: (
@@ -407,7 +407,7 @@ file:
       - end_bracket: )
     - keyword: BACKUP
     - keyword: 'NO'
-    - table_constraint_segment:
+    - table_constraint:
       - keyword: DISTKEY
       - bracketed:
           start_bracket: (
@@ -437,9 +437,8 @@ file:
       - data_type:
           keyword: INTEGER
       - column_attribute_segment:
-          keyword: ENCODE
-          column_encoding_segment:
-            keyword: AZ64
+        - keyword: ENCODE
+        - keyword: AZ64
       - column_constraint_segment:
         - keyword: PRIMARY
         - keyword: KEY
@@ -453,11 +452,10 @@ file:
             literal: '5'
             end_bracket: )
       - column_attribute_segment:
-          keyword: ENCODE
-          column_encoding_segment:
-            keyword: TEXT255
+        - keyword: ENCODE
+        - keyword: TEXT255
       - end_bracket: )
-    - table_constraint_segment:
+    - table_constraint:
       - keyword: DISTKEY
       - bracketed:
           start_bracket: (
@@ -484,9 +482,8 @@ file:
       - data_type:
           keyword: INTEGER
       - column_attribute_segment:
-          keyword: ENCODE
-          column_encoding_segment:
-            keyword: AZ64
+        - keyword: ENCODE
+        - keyword: AZ64
       - column_constraint_segment:
         - keyword: PRIMARY
         - keyword: KEY
@@ -500,9 +497,8 @@ file:
             literal: '5'
             end_bracket: )
       - column_attribute_segment:
-          keyword: ENCODE
-          column_encoding_segment:
-            keyword: TEXT255
+        - keyword: ENCODE
+        - keyword: TEXT255
       - comma: ','
       - column_reference:
           identifier: col3
@@ -549,7 +545,8 @@ file:
       - column_reference:
           identifier: col2
       - data_type:
-          keyword: DATE
+          datetime_type_identifier:
+            keyword: DATE
       - comma: ','
       - column_reference:
           identifier: col3
@@ -560,7 +557,7 @@ file:
             literal: '60'
             end_bracket: )
       - comma: ','
-      - table_constraint_segment:
+      - table_constraint:
           keyword: UNIQUE
           bracketed:
             start_bracket: (
@@ -568,7 +565,7 @@ file:
               identifier: col1
             end_bracket: )
       - end_bracket: )
-    - table_constraint_segment:
+    - table_constraint:
       - keyword: DISTKEY
       - bracketed:
           start_bracket: (
@@ -606,7 +603,8 @@ file:
       - column_reference:
           identifier: col2
       - data_type:
-          keyword: DATE
+          datetime_type_identifier:
+            keyword: DATE
       - comma: ','
       - column_reference:
           identifier: col3
@@ -617,7 +615,7 @@ file:
             literal: '60'
             end_bracket: )
       - comma: ','
-      - table_constraint_segment:
+      - table_constraint:
         - keyword: PRIMARY
         - keyword: KEY
         - bracketed:
@@ -626,7 +624,7 @@ file:
               identifier: col1
             end_bracket: )
       - end_bracket: )
-    - table_constraint_segment:
+    - table_constraint:
       - keyword: DISTKEY
       - bracketed:
           start_bracket: (
@@ -668,7 +666,8 @@ file:
       - column_reference:
           identifier: col2
       - data_type:
-          keyword: DATE
+          datetime_type_identifier:
+            keyword: DATE
       - comma: ','
       - column_reference:
           identifier: col3
@@ -679,7 +678,7 @@ file:
             literal: '60'
             end_bracket: )
       - comma: ','
-      - table_constraint_segment:
+      - table_constraint:
         - keyword: FOREIGN
         - keyword: KEY
         - bracketed:
@@ -748,5 +747,26 @@ file:
         like_option_segment:
         - keyword: EXCLUDING
         - keyword: DEFAULTS
+        end_bracket: )
+- statement_terminator: ;
+- statement:
+    create_table_statement:
+    - keyword: CREATE
+    - keyword: TABLE
+    - table_reference:
+        identifier: some_table
+    - bracketed:
+        start_bracket: (
+        column_reference:
+          identifier: some_column
+        data_type:
+          keyword: INTEGER
+        column_constraint_segment:
+        - keyword: NOT
+        - keyword: 'NULL'
+        column_attribute_segment:
+          keyword: DEFAULT
+          expression:
+            literal: '1'
         end_bracket: )
 - statement_terminator: ;

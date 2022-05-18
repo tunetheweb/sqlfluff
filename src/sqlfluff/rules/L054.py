@@ -2,12 +2,11 @@
 from typing import Optional, List
 
 from sqlfluff.core.rules.base import BaseRule, LintResult, RuleContext
-from sqlfluff.core.rules.doc_decorators import (
-    document_configuration,
-)
+from sqlfluff.core.rules.doc_decorators import document_configuration, document_groups
 import sqlfluff.core.rules.functional.segment_predicates as sp
 
 
+@document_groups
 @document_configuration
 class Rule_L054(BaseRule):
     """Inconsistent column references in ``GROUP BY/ORDER BY`` clauses.
@@ -83,8 +82,9 @@ class Rule_L054(BaseRule):
             1, 2;
     """
 
+    groups = ("all", "core")
     config_keywords = ["group_by_and_order_by_style"]
-    _ignore_types: List[str] = ["window_specification"]
+    _ignore_types: List[str] = ["withingroup_clause", "window_specification"]
 
     def _eval(self, context: RuleContext) -> Optional[LintResult]:
         """Inconsistent column references in GROUP BY/ORDER BY clauses."""
@@ -115,7 +115,7 @@ class Rule_L054(BaseRule):
         }
 
         # If there are no column references then just return
-        if not column_reference_category_set:
+        if not column_reference_category_set:  # pragma: no cover
             return LintResult(memory=context.memory)
 
         if self.group_by_and_order_by_style == "consistent":

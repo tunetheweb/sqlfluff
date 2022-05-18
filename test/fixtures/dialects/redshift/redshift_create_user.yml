@@ -3,101 +3,101 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: 05fe589d56960f4d5d47b5c6e089fc2e011761ccf689cae65b608f06f2e5270d
+_hash: 75ac79c99279e253b01b6d78ba5b72f42e7f153be2dd859a1240ee6567dcd99d
 file:
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: user1
     - keyword: PASSWORD
     - literal: "'md5153c434b4b77c89e6b94f12c5393af5b'"
 - statement_terminator: ;
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: admin
     - keyword: WITH
     - keyword: PASSWORD
     - literal: "'sha256|Mypassword1'"
 - statement_terminator: ;
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: lazy
     - keyword: PASSWORD
     - keyword: DISABLE
 - statement_terminator: ;
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: lazy
     - keyword: WITH
     - keyword: PASSWORD
     - keyword: DISABLE
 - statement_terminator: ;
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: '"lazy"'
     - keyword: WITH
     - keyword: PASSWORD
     - keyword: DISABLE
 - statement_terminator: ;
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: user1
     - keyword: PASSWORD
     - literal: "'md5153c434b4b77c89e6b94f12c5393af5b'"
     - keyword: CREATEDB
 - statement_terminator: ;
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: user1
     - keyword: PASSWORD
     - literal: "'md5153c434b4b77c89e6b94f12c5393af5b'"
     - keyword: NOCREATEDB
 - statement_terminator: ;
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: user1
     - keyword: PASSWORD
     - literal: "'md5153c434b4b77c89e6b94f12c5393af5b'"
     - keyword: CREATEUSER
 - statement_terminator: ;
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: user1
     - keyword: PASSWORD
     - literal: "'md5153c434b4b77c89e6b94f12c5393af5b'"
     - keyword: NOCREATEUSER
 - statement_terminator: ;
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: user1
     - keyword: PASSWORD
     - literal: "'md5153c434b4b77c89e6b94f12c5393af5b'"
@@ -106,10 +106,10 @@ file:
     - keyword: RESTRICTED
 - statement_terminator: ;
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: user1
     - keyword: PASSWORD
     - literal: "'md5153c434b4b77c89e6b94f12c5393af5b'"
@@ -118,10 +118,10 @@ file:
     - keyword: UNRESTRICTED
 - statement_terminator: ;
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: user1
     - keyword: PASSWORD
     - literal: "'md5153c434b4b77c89e6b94f12c5393af5b'"
@@ -131,10 +131,10 @@ file:
         identifier: group_1
 - statement_terminator: ;
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: user1
     - keyword: PASSWORD
     - literal: "'md5153c434b4b77c89e6b94f12c5393af5b'"
@@ -147,10 +147,10 @@ file:
         identifier: group_2
 - statement_terminator: ;
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: user1
     - keyword: PASSWORD
     - literal: "'md5153c434b4b77c89e6b94f12c5393af5b'"
@@ -159,10 +159,10 @@ file:
     - literal: "'2017-06-10'"
 - statement_terminator: ;
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: user1
     - keyword: PASSWORD
     - literal: "'md5153c434b4b77c89e6b94f12c5393af5b'"
@@ -171,10 +171,10 @@ file:
     - literal: '30'
 - statement_terminator: ;
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: user1
     - keyword: PASSWORD
     - literal: "'md5153c434b4b77c89e6b94f12c5393af5b'"
@@ -183,10 +183,10 @@ file:
     - keyword: UNLIMITED
 - statement_terminator: ;
 - statement:
-    create_user:
+    create_user_statement:
     - keyword: CREATE
     - keyword: USER
-    - object_reference:
+    - role_reference:
         identifier: user1
     - keyword: PASSWORD
     - literal: "'md5153c434b4b77c89e6b94f12c5393af5b'"

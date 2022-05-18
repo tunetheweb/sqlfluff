@@ -13,7 +13,7 @@ the :ref:`cliref`.
 
 For file based configuration *SQLFluff* will look for the following
 files in order. Later files will (if found) will be used to overwrite
-any vales read from earlier files.
+any values read from earlier files.
 
 - :code:`setup.cfg`
 - :code:`tox.ini`
@@ -33,8 +33,8 @@ supported cfg file types):
 .. code-block:: cfg
 
     [sqlfluff]
-    templater = "jinja"
-    sql_file_exts = ".sql,.sql.j2,.dml,.ddl"
+    templater = jinja
+    sql_file_exts = .sql,.sql.j2,.dml,.ddl
 
     [sqlfluff:indentation]
     indented_joins = false
@@ -57,8 +57,8 @@ For example, a snippet from a :code:`pyproject.toml` file:
 .. code-block:: cfg
 
     [tool.sqlfluff.core]
-    templater = "jinja"
-    sql_file_exts = ".sql,.sql.j2,.dml,.ddl"
+    templater = jinja
+    sql_file_exts = .sql,.sql.j2,.dml,.ddl
 
     [tool.sqlfluff.indentation]
     indented_joins = false
@@ -172,6 +172,17 @@ For example, to enable :class:`L027 <sqlfluff.core.rules.Rule_L027>`:
 If both :code:`exclude_rules` and :code:`rules` have non-empty value, then the
 excluded rules are removed from the rules list. This allows for example
 enabling common rules on top level but excluding some on subdirectory level.
+
+Rules can also be enabled/disabled by their grouping. Right now, the only
+rule grouping is :code:`core`. This will enable (or disable) a select group
+of rules that have been deemed 'core rules'.
+
+.. code-block:: cfg
+
+    [sqlfluff]
+    rules = core
+
+More information about 'core rules' can be found in the :ref:`ruleref`.
 
 Additionally, some rules have a special :code:`force_enable` configuration
 option, which allows to enable the given rule even for dialects where it is
@@ -409,21 +420,25 @@ loaded from files or folders. This is specified in the config file:
     [sqlfluff:templater:jinja]
     load_macros_from_path = my_macros
 
-`load_macros_from_path` is a comma-separated list of files or folders. SQLFluff
-will load macros from any :code:`.sql` file found in the specified locations.
-Locations are *relative to the config file*. For example, if the config file
-above was found at :code:`/home/my_project/.sqlfluff` then SQLFluff will look
-for macros in the folder :code:`/home/my_project/my_macros/` (but not
-subfolders). Alternatively, the path can also be a :code:`.sql` itself. Any
-macros defined in the config will always take precedence over a macro defined
-in the path.
+``load_macros_from_path`` is a comma-separated list of :code:`.sql` files or
+folders. Locations are *relative to the config file*. For example, if the
+config file above was found at :code:`/home/my_project/.sqlfluff`, then
+SQLFluff will look for macros in the folder :code:`/home/my_project/my_macros/`
+(but not subfolders). Any macros defined in the config will always take
+precedence over a macro defined in the path.
 
-**Note:** The `load_macros_from_path` also defines the search path for Jinja
-[include](https://jinja.palletsprojects.com/en/3.0.x/templates/#include) or
-[import](https://jinja.palletsprojects.com/en/3.0.x/templates/#import).
+* :code:`.sql` files: Macros in these files are available in every :code:`.sql`
+  file without requiring a Jinja :code:`include` or :code:`import`.
+* Folders: To use macros from the :code:`.sql` files in folders, use Jinja
+  :code:`include` or :code:`import` as explained below.
+
+**Note:** The :code:`load_macros_from_path` setting also defines the search
+path for Jinja
+`include <https://jinja.palletsprojects.com/en/3.0.x/templates/#include>`_ or
+`import <https://jinja.palletsprojects.com/en/3.0.x/templates/#import>`_.
 Unlike with macros (as noted above), subdirectories are supported. For example,
-if `load_macros_from_path` is set to `my_macros`, and there is a file
-`my_macros/subdir/my_file.sql`, you can do:
+if :code:`load_macros_from_path` is set to :code:`my_macros`, and there is a
+file :code:`my_macros/subdir/my_file.sql`, you can do:
 
 .. code-block:: jinja
 
@@ -545,14 +560,11 @@ dbt Project Configuration
     is still in very active development! If you encounter an issue, please
     let us know in a GitHub issue or on the SQLFluff slack workspace.
 
-dbt is not the default templater for *SQLFluff* (it is Jinja). For using
-*SQLFluff* with a dbt project, users can either use the `jinja` templater
-(which may be slightly faster, but will not support the full spectrum of
-macros) or the `dbt` templater, which uses dbt itself to render the
-sql (meaning that there is a much more reliable representation of macros,
-but a potential performance hit accordingly). At this stage we recommend
-that users try both approaches and choose according to the method that
-they intend to use *SQLFluff*.
+:code:`dbt` is not the default templater for *SQLFluff* (it is :code:`jinja`).
+:code:`dbt` is a complex tool, so using the default :code:`jinja` templater
+will be simpler. You should be aware when using the :code:`dbt` templater that
+you will be exposed to some of the complexity of :code:`dbt`. Users may wish to
+try both templaters and choose according to how they intend to use *SQLFluff*.
 
 A simple rule of thumb might be:
 
@@ -562,6 +574,27 @@ A simple rule of thumb might be:
 - If you are using *SQLFluff* in an IDE or on a git hook, where speed
   of response may be more important, then the `jinja` templater may
   be more appropriate.
+
+Pros:
+
+* Most (potentially all) macros will work
+
+Cons:
+
+* More complex, e.g. using it successfully may require deeper
+  understanding of your models and/or macros (including third-party macros)
+
+  * More configuration decisions to make
+  * Best practices are not yet established or documented
+
+* If your :code:`dbt` model files access a database at compile time, using
+  SQLFluff with the :code:`dbt` templater will **also** require access to a
+  database.
+
+  * Note that you can often point SQLFluff and the :code:`dbt` templater at a
+    test database (i.e. it doesn't have to be the production database).
+
+* Runs slower
 
 Installation & Configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -610,6 +643,41 @@ You can set the dbt project directory, profiles directory and profile with:
     operating systems (e.g. Linux or macOS), the default profile directory is
     `~/.dbt/`. On Windows, you can determine your default profile directory by
     running `dbt debug --config-dir`.
+
+To use builtin dbt Jinja functions SQLFluff provides a configuration option
+that enables usage withing templates.
+
+.. code-block:: cfg
+
+    [sqlfluff:templater:jinja]
+    apply_dbt_builtins = True
+
+This will provide dbt macros like `ref`, `var`, `is_incremental()`. If the need
+arises builtin dbt macros can be customised via Jinja macros in `.sqlfluff`
+configuration file.
+
+.. code-block:: cfg
+
+    [sqlfluff:templater:jinja:macros]
+    # Macros provided as builtins for dbt projects
+    dbt_ref = {% macro ref(model_ref) %}{{model_ref}}{% endmacro %}
+    dbt_source = {% macro source(source_name, table) %}{{source_name}}_{{table}}{% endmacro %}
+    dbt_config = {% macro config() %}{% for k in kwargs %}{% endfor %}{% endmacro %}
+    dbt_var = {% macro var(variable, default='') %}item{% endmacro %}
+    dbt_is_incremental = {% macro is_incremental() %}True{% endmacro %}
+
+If your project requires that you pass variables to dbt through command line,
+you can specify them in `template:dbt:context` section of `.sqlfluff`.
+See below configuration and its equivalent dbt command:
+
+.. code-block:: cfg
+
+    [sqlfluff:templater:dbt:context]
+    my_variable = 1
+
+.. code-block:: text
+
+    dbt run --vars '{"my_variable": 1}'
 
 Known Caveats
 ^^^^^^^^^^^^^
@@ -699,6 +767,17 @@ ignored until a corresponding `-- noqa:enable=<rule>[,...] | all` directive.
 
 .. _sqlfluffignore:
 
+Ignoring types of errors
+^^^^^^^^^^^^^^^^^^^^^^^^
+General *categories* of errors can be ignored using the ``--ignore`` command
+line option or the ``ignore`` setting in ``.sqlfluffignore``. Types of errors
+that can be ignored include:
+
+* ``lexing``
+* ``linting``
+* ``parsing``
+* ``templating``
+
 .sqlfluffignore
 ^^^^^^^^^^^^^^^
 
@@ -715,7 +794,7 @@ project would be:
     # Comments start with a hash.
 
     # Ignore anything in the "temp" path
-    /path/
+    /temp/
 
     # Ignore anything called "testing.sql"
     testing.sql

@@ -3,7 +3,7 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: 7fe5e4b983011fd90f3ccda59abb9331f668758dd7ab8a6deecd9ba91864c854
+_hash: a3a6930d6681ac484720ab8322991bc463aa8a29ab286671428dc53619fb5001
 file:
 - batch:
     statement:
@@ -88,7 +88,7 @@ file:
               - comma: ','
               - expression:
                   numeric_literal:
-                    binary_operator: '-'
+                    sign_indicator: '-'
                     literal: '1'
               - comma: ','
               - expression:
@@ -106,15 +106,15 @@ file:
               bracketed:
               - start_bracket: (
               - data_type:
-                  identifier: varchar
-              - comma: ','
-              - data_type:
-                - identifier: tbl_b
-                - dot: .
-                - identifier: column1
+                  data_type_identifier: varchar
               - comma: ','
               - expression:
-                  literal: '23'
+                  column_reference:
+                  - identifier: tbl_b
+                  - dot: .
+                  - identifier: column1
+              - comma: ','
+              - literal: '23'
               - end_bracket: )
             alias_expression:
               keyword: AS
@@ -142,7 +142,7 @@ file:
             start_bracket: (
             parameter: '@admit'
             data_type:
-              identifier: DATE
+              data_type_identifier: DATE
             end_bracket: )
       - keyword: RETURNS
       - keyword: TABLE
@@ -188,7 +188,7 @@ file:
             end_bracket: )
       - keyword: RETURNS
       - data_type:
-          identifier: INT
+          data_type_identifier: INT
       - keyword: AS
       - procedure_statement:
           statement:
@@ -201,3 +201,72 @@ file:
                     literal: '2'
                   statement_terminator: ;
             - keyword: END
+- go_statement:
+    keyword: GO
+- batch:
+    statement:
+      select_statement:
+        select_clause:
+          keyword: SELECT
+          select_clause_element:
+            wildcard_expression:
+              wildcard_identifier:
+                identifier: a
+                dot: .
+                star: '*'
+        from_clause:
+          keyword: FROM
+          from_expression:
+            from_expression_element:
+              table_expression:
+                bracketed:
+                  start_bracket: (
+                  select_statement:
+                    select_clause:
+                      keyword: SELECT
+                      select_clause_element:
+                        column_reference:
+                          identifier: FIN
+                    from_clause:
+                      keyword: FROM
+                      from_expression:
+                        from_expression_element:
+                          table_expression:
+                            table_reference:
+                              identifier: enc
+                  end_bracket: )
+              alias_expression:
+                keyword: AS
+                identifier: a
+            join_clause:
+            - keyword: LEFT
+            - keyword: JOIN
+            - from_expression_element:
+                table_expression:
+                  table_reference:
+                    identifier: b
+            - join_on_condition:
+                keyword: 'ON'
+                expression:
+                - column_reference:
+                  - identifier: a
+                  - dot: .
+                  - identifier: FIN
+                - comparison_operator:
+                    raw_comparison_operator: '='
+                - column_reference:
+                  - identifier: b
+                  - dot: .
+                  - identifier: FIN
+        where_clause:
+          keyword: WHERE
+          expression:
+          - column_reference:
+            - identifier: b
+            - dot: .
+            - identifier: FIN
+          - keyword: IS
+          - keyword: 'NULL'
+        statement_terminator: ;
+- go_statement:
+    keyword: GO

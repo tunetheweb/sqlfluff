@@ -3,7 +3,7 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: 4dd3e99e4321a5c62fecad2e1703d9c001452eab142905bbb364c177a361b78b
+_hash: 9a4002c192cc575fc3c37ea8a2f3031b12a1f0bce3cd043e226baeb257369c75
 file:
   statement:
     create_function_statement:
@@ -12,7 +12,7 @@ file:
     - keyword: FUNCTION
     - function_name:
         function_name_identifier: qs
-    - base:
+    - function_parameter_list:
         bracketed:
         - start_bracket: (
         - parameter: foo1
@@ -87,8 +87,8 @@ file:
             data_type_identifier: INT64
           end_angle_bracket: '>'
         end_angle_bracket: '>'
-    - base:
+    - function_definition:
       - keyword: LANGUAGE
-      - parameter: js
+      - identifier: js
       - keyword: AS
       - udf_body: "\"\"\"\n    CODE GOES HERE\n\"\"\""

@@ -45,6 +45,13 @@ INSERT INTO HumanResources.NewEmployee
     FROM EmployeeTemp;
 GO
 
-INSERT INTO HumanResources.NewEmployee
+INSERT INTO HumanResources.NewEmployee WITH(TABLOCK)
+OUTPUT * INTO Results
   EXEC FindEmployeesFunc @lastName = 'Picard'
+GO
+
+INSERT HumanResources.NewEmployee
+  (LastName, FirstName)
+  values
+  ('Kirk', 'James')
 GO

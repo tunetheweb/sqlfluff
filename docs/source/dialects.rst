@@ -61,6 +61,15 @@ The dialect for `Google BigQuery`_.
 
 .. _`Google BigQuery`: https://cloud.google.com/bigquery/
 
+.. _db2_dialect_ref:
+
+Db2
+------
+
+The dialect for `Db2`_.
+
+.. _`Db2`: https://www.ibm.com/analytics/db2
+
 .. _exasol_dialect_ref:
 
 Exasol
@@ -128,23 +137,32 @@ inherited from :ref:`postgres_dialect_ref`.
 
 .. _`Snowflake`: https://docs.snowflake.com/en/sql-reference.html
 
-.. _spark3_dialect_ref:
+.. _soql_dialect_ref:
 
-Spark3
-------
+SOQL
+----
 
-The dialect for `Spark3`_. It inherits from :ref:`ansi_dialect_ref` and
+The dialect for `SOQL`_ (Salesforce Object Query Language).
+
+.. _`SOQL`: https://developer.salesforce.com/docs/atlas.en-us.soql_sosl.meta/soql_sosl/sforce_api_calls_soql.htm
+
+.. _sparksql_dialect_ref:
+
+SparkSQL
+--------
+
+The dialect for `SparkSQL`_. It inherits from :ref:`ansi_dialect_ref` and
 includes relevant syntax from :ref:`hive_dialect_ref` for commands that
 permit Hive Format.
 
-This implementation focuses on the `ANSI Compliant dialect`_ introduced in
+This implementation focuses on the `Ansi Compliant Mode`_ introduced in
 Spark3, instead of being Hive Compliant. The introduction of ANSI Compliance
 provides better data quality and easier migration from traditional DBMS.
 
 Versions of Spark prior to 3.x will only support the Hive dialect.
 
-.. _`Spark3`: https://spark.apache.org/docs/latest/sql-ref.html
-.. _`Ansi Compliant dialect`: https://spark.apache.org/docs/latest/sql-ref-ansi-compliance.html
+.. _`SparkSQL`: https://spark.apache.org/docs/latest/sql-ref.html
+.. _`Ansi Compliant Mode`: https://spark.apache.org/docs/latest/sql-ref-ansi-compliance.html
 
 .. _sqlite_dialect_ref:
 

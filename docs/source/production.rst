@@ -106,6 +106,20 @@ SQLFluff comes with two `pre-commit`_ hooks:
 * sqlfluff-lint: returns linting errors.
 * sqlfluff-fix: attempts to fix rule violations.
 
+.. warning::
+   For safety reasons, ``sqlfluff-fix`` by default will not make any fixes in
+   files that had templating or parse errors, even if those errors were ignored
+   using ``noqa`` or `--ignore``.
+
+   Although it is not advised, you *can* tell SQLFluff to try and fix
+   these files by overriding the ``fix_even_unparsable`` setting
+   in ``.sqlfluff`` config file or using the ``sqlfluff fix --FIX-EVEN-UNPARSABLE``
+   command line option.
+
+   *Overriding this behavior may break your SQL. If you use this override,
+   always be sure to review any fixes applied to files with templating or parse
+   errors to verify they are okay.*
+
 You should create a file named `.pre-commit-config.yaml`
 at the root of your git project, which should look
 like this:
@@ -144,9 +158,15 @@ through the CLI using ``args:``.
 
 Using `GitHub Actions`_ to Annotate PRs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-When `sqlfluff lint` is run with the `--format github-annotation` option, it
-produces output compatible with this `action <https://github.com/yuzutech/annotations-action>`_.
-You can use this to annotate the SQL in `GitHub pull requests`.
+There are two way to utilize SQLFluff to annotate Github PRs.
+
+1. When `sqlfluff lint` is run with the `--format github-annotation-native`
+   option, it produces output formatted as `Github workflow commands`_ which
+   are converted into pull request annotations by Github.
+
+2. When `sqlfluff lint` is run with the `--format github-annotation` option, it
+   produces output compatible with this `action <https://github.com/yuzutech/annotations-action>`_.
+   Which uses Github API to annotate the SQL in `GitHub pull requests`.
 
 For more information and examples on using SQLFluff in GitHub Actions, see the
 `sqlfluff-github-actions repository <https://github.com/sqlfluff/sqlfluff-github-actions>`_.
@@ -156,4 +176,5 @@ For more information and examples on using SQLFluff in GitHub Actions, see the
 .. _`dbt templater`: `dbt-project-configuration`
 .. _`GitHub Actions`: https://github.com/features/actions
 .. _`GitHub pull requests`: https://docs.github.com/en/github/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests
+.. _`Github workflow commands`: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-a-notice-message
 .. _`dbt-adapters`: https://docs.getdbt.com/docs/available-adapters

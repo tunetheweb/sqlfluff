@@ -3,19 +3,19 @@ from dataclasses import dataclass, field
 from typing import cast, List, Optional, Tuple
 
 from sqlfluff.core.dialects.base import Dialect
+from sqlfluff.core.dialects.common import AliasInfo
 from sqlfluff.core.rules.analysis.select_crawler import (
     Query as SelectCrawlerQuery,
     SelectCrawler,
 )
-from sqlfluff.core.dialects.common import AliasInfo
 from sqlfluff.core.rules.base import (
     BaseRule,
     LintResult,
     RuleContext,
     EvalResultType,
 )
+from sqlfluff.core.rules.doc_decorators import document_configuration, document_groups
 from sqlfluff.core.rules.functional import sp
-from sqlfluff.core.rules.doc_decorators import document_configuration
 from sqlfluff.core.rules.reference import object_ref_matches_table
 
 
@@ -26,14 +26,15 @@ class L026Query(SelectCrawlerQuery):
     aliases: List[AliasInfo] = field(default_factory=list)
 
 
+@document_groups
 @document_configuration
 class Rule_L026(BaseRule):
     """References cannot reference objects not present in ``FROM`` clause.
 
     .. note::
-       This rule is disabled by default for BigQuery due to its use of
-       structs which trigger false positives. It can be enabled with the
-       ``force_enable = True`` flag.
+       This rule is disabled by default for BigQuery, Hive, Redshift, SOQL, and SparkSQL
+       due to the support of things like structs and lateral views which trigger false
+       positives. It can be enabled with the ``force_enable = True`` flag.
 
     **Anti-pattern**
 
@@ -57,14 +58,16 @@ class Rule_L026(BaseRule):
 
     """
 
+    groups = ("all", "core")
     config_keywords = ["force_enable"]
+    _dialects_disabled_by_default = ["bigquery", "hive", "redshift", "soql", "sparksql"]
 
     def _eval(self, context: RuleContext) -> EvalResultType:
         # Config type hints
         self.force_enable: bool
 
         if (
-            context.dialect.name in ["bigquery", "hive", "redshift"]
+            context.dialect.name in self._dialects_disabled_by_default
             and not self.force_enable
         ):
             return LintResult()
@@ -148,7 +151,10 @@ class Rule_L026(BaseRule):
         # - They are the target table, similar to an INSERT or UPDATE
         #   statement, thus not expected to match a table in the FROM
         #   clause.
-        return any(seg.is_type("into_table_clause") for seg in ref_path)
+        if ref_path:
+            return any(seg.is_type("into_table_clause") for seg in ref_path)
+        else:
+            return False  # pragma: no cover
 
     @staticmethod
     def _get_table_refs(ref, dialect):

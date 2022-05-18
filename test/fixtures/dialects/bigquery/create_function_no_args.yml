@@ -3,24 +3,35 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: fa012a4e84dfe072b317e5e5ace48d266ab98c320b14d91491ff85e1f5c33243
+_hash: 468e128aa402dfdbe11c73ddbd6af9bc0909006170bbf158c23373386d150d12
 file:
-  statement:
+- statement:
     create_function_statement:
     - keyword: CREATE
     - keyword: FUNCTION
     - function_name:
         function_name_identifier: add
-    - base:
+    - function_parameter_list:
         bracketed:
           start_bracket: (
           end_bracket: )
     - keyword: RETURNS
     - data_type:
         data_type_identifier: integer
-    - base:
+    - function_definition:
       - keyword: AS
       - udf_body: "'select $1 + $2;'"
       - keyword: LANGUAGE
-      - parameter: SQL
-  statement_terminator: ;
+      - identifier: SQL
+- statement_terminator: ;
+- statement:
+    drop_function_statement:
+    - keyword: DROP
+    - keyword: FUNCTION
+    - function_name:
+      - identifier: myproject
+      - dot: .
+      - identifier: mydataset
+      - dot: .
+      - function_name_identifier: addfunc
+- statement_terminator: ;

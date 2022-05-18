@@ -5,11 +5,13 @@ from sqlfluff.core.rules.base import BaseRule, LintResult, LintFix, RuleContext
 from sqlfluff.core.rules.doc_decorators import (
     document_configuration,
     document_fix_compatible,
+    document_groups,
 )
 
 
-@document_configuration
+@document_groups
 @document_fix_compatible
+@document_configuration
 class Rule_L002(BaseRule):
     """Mixed Tabs and Spaces in single whitespace.
 
@@ -41,6 +43,7 @@ class Rule_L002(BaseRule):
 
     """
 
+    groups = ("all", "core")
     config_keywords = ["tab_space_size"]
 
     def _eval(self, context: RuleContext) -> Optional[LintResult]:
@@ -54,7 +57,7 @@ class Rule_L002(BaseRule):
 
         if context.segment.is_type("whitespace"):
             if " " in context.segment.raw and "\t" in context.segment.raw:
-                if len(context.raw_stack) == 0 or context.raw_stack[-1].is_type(
+                if context.raw_segment_pre is None or context.raw_segment_pre.is_type(
                     "newline"
                 ):
                     # We've got a single whitespace at the beginning of a line.

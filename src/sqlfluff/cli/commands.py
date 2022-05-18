@@ -1,18 +1,13 @@
 """Contains the CLI."""
 
 from itertools import chain
+import os
 import sys
 import json
 import logging
 import time
 from logging import LogRecord
-from typing import (
-    Callable,
-    Tuple,
-    NoReturn,
-    Optional,
-    List,
-)
+from typing import Callable, Tuple, Optional, List, cast
 
 import yaml
 
@@ -35,16 +30,16 @@ from sqlfluff.cli.formatters import (
     colorize,
     format_dialect_warning,
     format_dialects,
-    CallbackFormatter,
+    OutputStreamFormatter,
 )
 from sqlfluff.cli.helpers import cli_table, get_package_version
+from sqlfluff.cli.outputstream import make_output_stream, OutputStream
 
 # Import from sqlfluff core.
 from sqlfluff.core import (
     Linter,
     FluffConfig,
     SQLLintError,
-    SQLParseError,
     SQLTemplaterError,
     SQLFluffUserError,
     dialect_selector,
@@ -56,6 +51,7 @@ from sqlfluff.core.config import progress_bar_configuration
 from sqlfluff.core.enums import FormatType, Color
 from sqlfluff.core.linter import ParsedString
 from sqlfluff.core.plugin.host import get_plugin_manager
+from sqlfluff.core.linter import LintingResult
 
 
 class RedWarningsFilter(logging.Filter):
@@ -181,14 +177,14 @@ def core_options(f: Callable) -> Callable:
         f = click.option(
             "--dialect",
             default=None,
-            help="The dialect of SQL to lint (default=ansi)",
+            help="The dialect of SQL to lint",
             shell_complete=dialect_shell_complete,
         )(f)
     else:  # pragma: no cover
         f = click.option(
             "--dialect",
             default=None,
-            help="The dialect of SQL to lint (default=ansi)",
+            help="The dialect of SQL to lint",
         )(f)
     f = click.option(
         "--templater",
@@ -251,7 +247,7 @@ def core_options(f: Callable) -> Callable:
     )(f)
     f = click.option(
         "--encoding",
-        default="autodetect",
+        default=None,
         help=(
             "Specify encoding to use when reading and writing files. Defaults to "
             "autodetect."
@@ -263,9 +259,10 @@ def core_options(f: Callable) -> Callable:
         help=(
             "Ignore particular families of errors so that they don't cause a failed "
             "run. For example `--ignore parsing` would mean that any parsing errors "
-            "are ignored and don't influence the success or fail of a run. Multiple "
-            "options are possible if comma separated e.g. "
-            "`--ignore parsing,templating`."
+            "are ignored and don't influence the success or fail of a run. "
+            "`--ignore` behaves somewhat like `noqa` comments, except it "
+            "applies globally. Multiple options are possible if comma separated: "
+            "e.g. `--ignore parsing,templating`."
         ),
     )(f)
     f = click.option(
@@ -295,7 +292,7 @@ def get_config(
     **kwargs,
 ) -> FluffConfig:
     """Get a config object from kwargs."""
-    if "dialect" in kwargs:
+    if kwargs.get("dialect"):
         try:
             # We're just making sure it exists at this stage.
             # It will be fetched properly in the linter.
@@ -315,6 +312,9 @@ def get_config(
                 )
             )
             sys.exit(66)
+    from_root_kwargs = {}
+    if "require_dialect" in kwargs:
+        from_root_kwargs["require_dialect"] = kwargs.pop("require_dialect")
     # Instantiate a config object (filtering out the nulls)
     overrides = {k: kwargs[k] for k in kwargs if kwargs[k] is not None}
     try:
@@ -322,6 +322,7 @@ def get_config(
             extra_config_path=extra_config_path,
             ignore_local_config=ignore_local_config,
             overrides=overrides,
+            **from_root_kwargs,
         )
     except SQLFluffUserError as err:  # pragma: no cover
         click.echo(
@@ -333,50 +334,25 @@ def get_config(
         sys.exit(66)
 
 
-def _callback_handler(cfg: FluffConfig) -> Callable:
-    """Returns function which will be bound as a callback for printing passed message.
-
-    Called in `get_linter_and_formatter`.
-    """
-
-    def _echo_with_tqdm_lock(message: str) -> None:
-        """Makes sure that message printing (echoing) will be not in conflict with tqdm.
-
-        It may happen that progressbar conflicts with extra printing. Nothing very
-        serious happens then, except that there is printed (not removed) progressbar
-        line. The `external_write_mode` allows to disable tqdm for writing time.
-        """
-        with tqdm.external_write_mode():
-            click.echo(message=message, color=cfg.get("color"))
-
-    return _echo_with_tqdm_lock
-
-
 def get_linter_and_formatter(
-    cfg: FluffConfig, silent: bool = False
-) -> Tuple[Linter, CallbackFormatter]:
+    cfg: FluffConfig, output_stream: Optional[OutputStream] = None
+) -> Tuple[Linter, OutputStreamFormatter]:
     """Get a linter object given a config."""
     try:
         # We're just making sure it exists at this stage.
         # It will be fetched properly in the linter.
-        dialect_selector(cfg.get("dialect"))
+        dialect = cfg.get("dialect")
+        if dialect:
+            dialect_selector(dialect)
     except KeyError:  # pragma: no cover
         click.echo(f"Error: Unknown dialect '{cfg.get('dialect')}'")
         sys.exit(66)
-
-    if not silent:
-        # Instantiate the linter and return it (with an output function)
-        formatter = CallbackFormatter(
-            callback=_callback_handler(cfg=cfg),
-            verbosity=cfg.get("verbose"),
-            output_line_length=cfg.get("output_line_length"),
-        )
-        return Linter(config=cfg, formatter=formatter), formatter
-    else:
-        # Instantiate the linter and return. NB: No formatter
-        # in the Linter and a black formatter otherwise.
-        formatter = CallbackFormatter(callback=lambda m: None, verbosity=0)
-        return Linter(config=cfg), formatter
+    formatter = OutputStreamFormatter(
+        output_stream=output_stream or make_output_stream(cfg),
+        verbosity=cfg.get("verbose"),
+        output_line_length=cfg.get("output_line_length"),
+    )
+    return Linter(config=cfg, formatter=formatter), formatter
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
@@ -389,7 +365,7 @@ def cli():
 @common_options
 def version(**kwargs) -> None:
     """Show the version of sqlfluff."""
-    c = get_config(**kwargs)
+    c = get_config(**kwargs, require_dialect=False)
     if c.get("verbose") > 0:
         # Instantiate the linter
         lnt, formatter = get_linter_and_formatter(c)
@@ -404,7 +380,7 @@ def version(**kwargs) -> None:
 @common_options
 def rules(**kwargs) -> None:
     """Show the current rules in use."""
-    c = get_config(**kwargs)
+    c = get_config(**kwargs, dialect="ansi")
     lnt, _ = get_linter_and_formatter(c)
     click.echo(format_rules(lnt), color=c.get("color"))
 
@@ -413,8 +389,19 @@ def rules(**kwargs) -> None:
 @common_options
 def dialects(**kwargs) -> None:
     """Show the current dialects available."""
-    c = get_config(**kwargs)
+    c = get_config(**kwargs, require_dialect=False)
     click.echo(format_dialects(dialect_readout), color=c.get("color"))
+
+
+def dump_file_payload(filename: Optional[str], payload: str):
+    """Write the output file content to stdout or file."""
+    # If there's a file specified to write to, write to it.
+    if filename:
+        with open(filename, "w") as out_file:
+            out_file.write(payload)
+    # Otherwise write to stdout
+    else:
+        click.echo(payload)
 
 
 @cli.command()
@@ -429,12 +416,20 @@ def dialects(**kwargs) -> None:
     help="What format to return the lint result in (default=human).",
 )
 @click.option(
+    "--write-output",
+    help=(
+        "Optionally provide a filename to write the results to, mostly used in "
+        "tandem with --format. NB: Setting an output file re-enables normal "
+        "stdout logging."
+    ),
+)
+@click.option(
     "--annotation-level",
     default="notice",
-    type=click.Choice(["notice", "warning", "failure"], case_sensitive=False),
+    type=click.Choice(["notice", "warning", "failure", "error"], case_sensitive=False),
     help=(
-        "When format is set to github-annotation, "
-        "default annotation level (default=notice)."
+        "When format is set to github-annotation or github-annotation-native, "
+        "default annotation level (default=notice). failure and error are equivalent."
     ),
 )
 @click.option(
@@ -467,6 +462,7 @@ def lint(
     paths: Tuple[str],
     processes: int,
     format: str,
+    write_output: Optional[str],
     annotation_level: str,
     nofail: bool,
     disregard_sqlfluffignores: bool,
@@ -476,7 +472,7 @@ def lint(
     extra_config_path: Optional[str] = None,
     ignore_local_config: bool = False,
     **kwargs,
-) -> NoReturn:
+) -> None:
     """Lint SQL files via passing a list of files or using stdin.
 
     PATH is the path to a sql file or directory to lint. This can be either a
@@ -495,9 +491,13 @@ def lint(
         echo 'select col from tbl' | sqlfluff lint -
 
     """
-    config = get_config(extra_config_path, ignore_local_config, **kwargs)
-    non_human_output = format != FormatType.human.value
-    lnt, formatter = get_linter_and_formatter(config, silent=non_human_output)
+    config = get_config(
+        extra_config_path, ignore_local_config, require_dialect=False, **kwargs
+    )
+    non_human_output = (format != FormatType.human.value) or (write_output is not None)
+    file_output = None
+    output_stream = make_output_stream(config, format, write_output)
+    lnt, formatter = get_linter_and_formatter(config, output_stream)
 
     verbose = config.get("verbose")
     progress_bar_configuration.disable_progress_bar = disable_progress_bar
@@ -534,10 +534,13 @@ def lint(
             click.echo(format_linting_stats(result, verbose=verbose))
 
     if format == FormatType.json.value:
-        click.echo(json.dumps(result.as_records()))
+        file_output = json.dumps(result.as_records())
     elif format == FormatType.yaml.value:
-        click.echo(yaml.dump(result.as_records(), sort_keys=False))
+        file_output = yaml.dump(result.as_records(), sort_keys=False)
     elif format == FormatType.github_annotation.value:
+        if annotation_level == "error":
+            annotation_level = "failure"
+
         github_result = []
         for record in result.as_records():
             filepath = record["filepath"]
@@ -557,8 +560,33 @@ def lint(
                         "annotation_level": annotation_level,
                     }
                 )
-        click.echo(json.dumps(github_result))
+        file_output = json.dumps(github_result)
+    elif format == FormatType.github_annotation_native.value:
+        if annotation_level == "failure":
+            annotation_level = "error"
 
+        github_result_native = []
+        for record in result.as_records():
+            filepath = record["filepath"]
+            for violation in record["violations"]:
+                # NOTE: The output format is designed for GitHub action:
+                # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-a-notice-message
+                line = f"::{annotation_level} "
+                line += "title=SQLFluff,"
+                line += f"file={filepath},"
+                line += f"line={violation['line_no']},"
+                line += f"col={violation['line_pos']}"
+                line += "::"
+                line += f"{violation['code']}: {violation['description']}"
+
+                github_result_native.append(line)
+
+        file_output = "\n".join(github_result_native)
+
+    if file_output:
+        dump_file_payload(write_output, cast(str, file_output))
+
+    output_stream.close()
     if bench:
         click.echo("==== overall timings ====")
         click.echo(cli_table([("Clock time", result.total_time)]))
@@ -573,6 +601,30 @@ def lint(
         sys.exit(result.stats()["exit code"])
     else:
         sys.exit(0)
+
+
+def _handle_files_with_tmp_or_prs_errors(lint_result: LintingResult) -> int:
+    """Discard lint fixes for files with templating or parse errors.
+
+    Returns 1 if there are any files with templating or parse errors after
+    filtering, else 0. (Intended as a process exit code.)
+    """
+    total_errors, num_filtered_errors = lint_result.count_tmp_prs_errors()
+    lint_result.discard_fixes_for_lint_errors_in_files_with_tmp_or_prs_errors()
+    if total_errors:
+        click.echo(
+            colorize(f"  [{total_errors} templating/parsing errors found]", Color.red)
+        )
+        if num_filtered_errors < total_errors:
+            color = Color.red if num_filtered_errors else Color.green
+            click.echo(
+                colorize(
+                    f"  [{num_filtered_errors} templating/parsing errors "
+                    f'remaining after "ignore"]',
+                    color,
+                )
+            )
+    return 1 if num_filtered_errors else 0
 
 
 def do_fixes(lnt, result, formatter=None, **kwargs):
@@ -619,6 +671,19 @@ def do_fixes(lnt, result, formatter=None, **kwargs):
     is_flag=True,
     help="Disables progress bars.",
 )
+@click.option(
+    "--FIX-EVEN-UNPARSABLE",
+    is_flag=True,
+    default=None,
+    help=(
+        "Enables fixing of files that have templating or parse errors. "
+        "Note that the similar-sounding '--ignore' or 'noqa' features merely "
+        "prevent errors from being *displayed*. For safety reasons, the 'fix'"
+        "command will not make any fixes in files that have templating or parse "
+        "errors unless '--FIX-EVEN-UNPARSABLE' is enabled on the command line"
+        "or in the .sqlfluff config file."
+    ),
+)
 @click.argument("paths", nargs=-1, type=click.Path(allow_dash=True))
 def fix(
     force: bool,
@@ -631,7 +696,7 @@ def fix(
     extra_config_path: Optional[str] = None,
     ignore_local_config: bool = False,
     **kwargs,
-) -> NoReturn:
+) -> None:
     """Fix SQL files.
 
     PATH is the path to a sql file or directory to lint. This can be either a
@@ -642,8 +707,14 @@ def fix(
     # some quick checks
     fixing_stdin = ("-",) == paths
 
-    config = get_config(extra_config_path, ignore_local_config, **kwargs)
-    lnt, formatter = get_linter_and_formatter(config, silent=fixing_stdin)
+    config = get_config(
+        extra_config_path, ignore_local_config, require_dialect=False, **kwargs
+    )
+    fix_even_unparsable = config.get("fix_even_unparsable")
+    output_stream = make_output_stream(
+        config, None, os.devnull if fixing_stdin else None
+    )
+    lnt, formatter = get_linter_and_formatter(config, output_stream)
 
     verbose = config.get("verbose")
     progress_bar_configuration.disable_progress_bar = disable_progress_bar
@@ -662,6 +733,8 @@ def fix(
         result = lnt.lint_string_wrapped(stdin, fname="stdin", fix=True)
         templater_error = result.num_violations(types=SQLTemplaterError) > 0
         unfixable_error = result.num_violations(types=SQLLintError, fixable=False) > 0
+        if not fix_even_unparsable:
+            exit_code = _handle_files_with_tmp_or_prs_errors(result)
 
         if result.num_violations(types=SQLLintError, fixable=True) > 0:
             stdout = result.paths[0].files[0].fix_string()[0]
@@ -678,16 +751,17 @@ def fix(
             )
             click.echo(
                 colorize(
-                    "Use '--ignore templating' to attempt to fix anyway.",
+                    "Use --FIX-EVEN-UNPARSABLE' to attempt to fix the SQL anyway.",
                     Color.red,
                 ),
                 err=True,
             )
+
         if unfixable_error:
             click.echo(colorize("Unfixable violations detected.", Color.red), err=True)
 
         click.echo(stdout, nl=False)
-        sys.exit(1 if templater_error or unfixable_error else 0)
+        sys.exit(1 if templater_error or unfixable_error else exit_code)
 
     # Lint the paths (not with the fix argument at this stage), outputting as we go.
     click.echo("==== finding fixable violations ====")
@@ -707,6 +781,9 @@ def fix(
             err=True,
         )
         sys.exit(1)
+
+    if not fix_even_unparsable:
+        exit_code = _handle_files_with_tmp_or_prs_errors(result)
 
     # NB: We filter to linting violations here, because they're
     # the only ones which can be potentially fixed.
@@ -763,15 +840,9 @@ def fix(
             "  [{} unfixable linting violations found]",
             1,
         ),
-        (
-            dict(types=SQLTemplaterError),
-            "  [{} templating errors found]",
-            1,
-        ),
-        (dict(types=SQLParseError), "  [{} parsing errors found]", 0),
     ]
     for num_violations_kwargs, message_format, error_level in error_types:
-        num_violations = result.num_violations(**num_violations_kwargs)  # type: ignore
+        num_violations = result.num_violations(**num_violations_kwargs)
         if num_violations > 0:
             click.echo(message_format.format(num_violations))
             exit_code = max(exit_code, error_level)
@@ -839,6 +910,14 @@ def quoted_presenter(dumper, data):
     help="What format to return the parse result in.",
 )
 @click.option(
+    "--write-output",
+    help=(
+        "Optionally provide a filename to write the results to, mostly used in "
+        "tandem with --format. NB: Setting an output file re-enables normal "
+        "stdout logging."
+    ),
+)
+@click.option(
     "--profiler", is_flag=True, help="Set this flag to engage the python profiler."
 )
 @click.option(
@@ -854,6 +933,7 @@ def parse(
     code_only: bool,
     include_meta: bool,
     format: str,
+    write_output: Optional[str],
     profiler: bool,
     bench: bool,
     nofail: bool,
@@ -861,7 +941,7 @@ def parse(
     extra_config_path: Optional[str] = None,
     ignore_local_config: bool = False,
     **kwargs,
-) -> NoReturn:
+) -> None:
     """Parse SQL files and just spit out the result.
 
     PATH is the path to a sql file or directory to lint. This can be either a
@@ -869,10 +949,14 @@ def parse(
     character to indicate reading from *stdin* or a dot/blank ('.'/' ') which will
     be interpreted like passing the current working directory as a path argument.
     """
-    c = get_config(extra_config_path, ignore_local_config, **kwargs)
+    c = get_config(
+        extra_config_path, ignore_local_config, require_dialect=False, **kwargs
+    )
     # We don't want anything else to be logged if we want json or yaml output
-    non_human_output = format in (FormatType.json.value, FormatType.yaml.value)
-    lnt, formatter = get_linter_and_formatter(c, silent=non_human_output)
+    # unless we're writing to a file.
+    non_human_output = (format != FormatType.human.value) or (write_output is not None)
+    output_stream = make_output_stream(c, format, write_output)
+    lnt, formatter = get_linter_and_formatter(c, output_stream)
     verbose = c.get("verbose")
     recurse = c.get("recurse")
 
@@ -918,7 +1002,7 @@ def parse(
         # iterative print for human readout
         if format == FormatType.human.value:
             violations_count = _print_out_violations_and_timing(
-                bench, code_only, total_time, verbose, parsed_strings
+                output_stream, bench, code_only, total_time, verbose, parsed_strings
             )
         else:
             parsed_strings_dict = [
@@ -937,9 +1021,12 @@ def parse(
                 # For yaml dumping always dump double quoted strings if they contain
                 # tabs or newlines.
                 yaml.add_representer(str, quoted_presenter)
-                click.echo(yaml.dump(parsed_strings_dict, sort_keys=False))
+                file_output = yaml.dump(parsed_strings_dict, sort_keys=False)
             elif format == FormatType.json.value:
-                click.echo(json.dumps(parsed_strings_dict))
+                file_output = json.dumps(parsed_strings_dict)
+
+            # Dump the output to stdout or to file as appropriate.
+            dump_file_payload(write_output, file_output)
 
     except OSError:  # pragma: no cover
         click.echo(
@@ -967,6 +1054,7 @@ def parse(
 
 
 def _print_out_violations_and_timing(
+    output_stream: OutputStream,
     bench: bool,
     code_only: bool,
     total_time: float,
@@ -981,30 +1069,30 @@ def _print_out_violations_and_timing(
         timing.add(parsed_string.time_dict)
 
         if parsed_string.tree:
-            click.echo(parsed_string.tree.stringify(code_only=code_only))
+            output_stream.write(parsed_string.tree.stringify(code_only=code_only))
         else:
             # TODO: Make this prettier
-            click.echo("...Failed to Parse...")  # pragma: no cover
+            output_stream.write("...Failed to Parse...")  # pragma: no cover
 
         violations_count += len(parsed_string.violations)
         if parsed_string.violations:
-            click.echo("==== parsing violations ====")  # pragma: no cover
+            output_stream.write("==== parsing violations ====")  # pragma: no cover
         for v in parsed_string.violations:
-            click.echo(format_violation(v))  # pragma: no cover
+            output_stream.write(format_violation(v))  # pragma: no cover
         if parsed_string.violations and parsed_string.config.get("dialect") == "ansi":
-            click.echo(format_dialect_warning())  # pragma: no cover
+            output_stream.write(format_dialect_warning())  # pragma: no cover
 
         if verbose >= 2:
-            click.echo("==== timings ====")
-            click.echo(cli_table(parsed_string.time_dict.items()))
+            output_stream.write("==== timings ====")
+            output_stream.write(cli_table(parsed_string.time_dict.items()))
 
     if verbose >= 2 or bench:
-        click.echo("==== overall timings ====")
-        click.echo(cli_table([("Clock time", total_time)]))
+        output_stream.write("==== overall timings ====")
+        output_stream.write(cli_table([("Clock time", total_time)]))
         timing_summary = timing.summary()
         for step in timing_summary:
-            click.echo(f"=== {step} ===")
-            click.echo(cli_table(timing_summary[step].items()))
+            output_stream.write(f"=== {step} ===")
+            output_stream.write(cli_table(timing_summary[step].items()))
 
     return violations_count
 

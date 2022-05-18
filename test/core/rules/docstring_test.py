@@ -3,7 +3,7 @@ import pytest
 
 from sqlfluff import lint
 from sqlfluff.core.plugin.host import get_plugin_manager
-from sqlfluff.core.rules.doc_decorators import is_configurable
+from sqlfluff.core.rules.doc_decorators import is_configurable, is_documenting_groups
 
 KEYWORD_ANTI = "    **Anti-pattern**"
 KEYWORD_BEST = "    **Best practice**"
@@ -53,17 +53,26 @@ def test_config_decorator():
                 )
 
 
+def test_groups_decorator():
+    """Test rules with groups have the @document_groups decorator."""
+    for plugin_rules in get_plugin_manager().hook.get_rules():
+        for rule in plugin_rules:
+            if hasattr(rule, "groups"):
+                assert is_documenting_groups(
+                    rule
+                ), f'Rule {rule.__name__} does not specify "@document_groups".'
+
+
 def test_backtick_replace():
     """Test replacing docstring double backticks for lint results."""
     sql = """
     SELECT
-        foo.a,
-        bar.b
+        DISTINCT(a),
+        b
     FROM foo
-    JOIN bar;
     """
-    result = lint(sql, rules=["L051"])
-    # L051 docstring looks like:
-    # ``INNER JOIN`` must be fully qualified.
+    result = lint(sql, rules=["L015"])
+    # L015 docstring looks like:
+    # ``DISTINCT`` used with parentheses.
     # Check the double bacticks (``) get replaced by a single quote (').
-    assert result[0]["description"] == "'INNER JOIN' must be fully qualified."
+    assert result[0]["description"] == "'DISTINCT' used with parentheses."

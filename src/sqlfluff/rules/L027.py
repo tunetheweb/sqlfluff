@@ -2,8 +2,10 @@
 
 from sqlfluff.core.rules.base import LintResult
 from sqlfluff.rules.L020 import Rule_L020
+from sqlfluff.core.rules.doc_decorators import document_groups
 
 
+@document_groups
 class Rule_L027(Rule_L020):
     """References should be qualified if select has more than one referenced table/view.
 
@@ -31,6 +33,8 @@ class Rule_L027(Rule_L020):
         FROM foo
         LEFT JOIN vee ON vee.a = foo.a
     """
+
+    groups = ("all",)
 
     def _lint_references_and_aliases(
         self,
@@ -70,6 +74,23 @@ class Rule_L027(Rule_L020):
                         anchor=r,
                         description=f"Unqualified reference {r.raw!r} found in "
                         "select with more than one referenced table/view.",
+                    )
+                )
+
+            all_table_aliases = [t.ref_str for t in table_aliases] + standalone_aliases
+
+            # For qualified references, we want to check that the alias is actually
+            # valid
+            if (
+                this_ref_type == "qualified"
+                and list(r.iter_raw_references())[0].part not in all_table_aliases
+            ):
+                violation_buff.append(
+                    LintResult(
+                        anchor=r,
+                        description=f"Qualified reference {r.raw!r} not found in "
+                        f"available tables/view aliases {all_table_aliases} in select "
+                        "with more than one referenced table/view.",
                     )
                 )
 

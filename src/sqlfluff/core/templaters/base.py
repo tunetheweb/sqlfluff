@@ -2,10 +2,7 @@
 
 import logging
 from bisect import bisect_left
-from collections import defaultdict
 from typing import Dict, Iterator, List, Tuple, Optional, NamedTuple, Iterable
-
-from sqlfluff.core.cached_property import cached_property
 
 # Instantiate the templater logger
 templater_logger = logging.getLogger("sqlfluff.templater")
@@ -26,10 +23,12 @@ def iter_indices_of_newlines(raw_str: str) -> Iterator[int]:
 class RawFileSlice(NamedTuple):
     """A slice referring to a raw file."""
 
-    raw: str
+    raw: str  # Source string
     slice_type: str
-    source_idx: int
+    source_idx: int  # Offset from beginning of source string
     slice_subtype: Optional[str] = None
+    # Block index, incremented on start or end block tags, e.g. "if", "for"
+    block_idx: int = 0
 
     def end_source_idx(self):
         """Return the closing index of this slice."""
@@ -38,6 +37,10 @@ class RawFileSlice(NamedTuple):
     def source_slice(self):
         """Return the a slice object for this slice."""
         return slice(self.source_idx, self.end_source_idx())
+
+    def is_source_only_slice(self):
+        """Based on its slice_type, does it only appear in the *source*?"""
+        return self.slice_type in ("comment", "block_end", "block_start", "block_mid")
 
 
 class TemplatedFileSlice(NamedTuple):
@@ -76,6 +79,7 @@ class TemplatedFile:
         templated_str: Optional[str] = None,
         sliced_file: Optional[List[TemplatedFileSlice]] = None,
         raw_sliced: Optional[List[RawFileSlice]] = None,
+        check_consistency=True,
     ):
         """Initialise the TemplatedFile.
 
@@ -106,6 +110,36 @@ class TemplatedFile:
         # Precalculate newlines, character positions.
         self._source_newlines = list(iter_indices_of_newlines(self.source_str))
         self._templated_newlines = list(iter_indices_of_newlines(self.templated_str))
+
+        # NOTE: The "check_consistency" flag should always be True when using
+        # SQLFluff in real life. This flag was only added because some legacy
+        # templater tests in test/core/templaters/jinja_test.py use hardcoded
+        # test data with issues that will trigger errors here. It would be cool
+        # to fix that data someday. I (Barry H.) started looking into it, but
+        # it was much trickier than I expected, because bits of the same data
+        # are shared across multiple tests.
+        if check_consistency:
+            # Sanity check raw string and slices.
+            pos = 0
+            rfs: RawFileSlice
+            for idx, rfs in enumerate(self.raw_sliced):
+                assert rfs.source_idx == pos
+                pos += len(rfs.raw)
+            assert pos == len(self.source_str)
+
+            # Sanity check templated string and slices.
+            previous_slice = None
+            tfs: Optional[TemplatedFileSlice] = None
+            for idx, tfs in enumerate(self.sliced_file):
+                if previous_slice:
+                    assert (
+                        tfs.templated_slice.start == previous_slice.templated_slice.stop
+                    )
+                else:
+                    assert tfs.templated_slice.start == 0
+                previous_slice = tfs
+            if self.sliced_file and templated_str is not None:
+                assert tfs.templated_slice.stop == len(templated_str)
 
     @classmethod
     def from_string(cls, raw):
@@ -179,39 +213,6 @@ class TemplatedFile:
         if first_idx is None:  # pragma: no cover
             raise ValueError("Position Not Found")
         return first_idx, last_idx
-
-    @cached_property
-    def raw_slice_block_info(self) -> RawSliceBlockInfo:
-        """Returns a dict with a unique ID for each template block."""
-        block_ids: Dict[RawFileSlice, int] = {}
-        block_content_types = defaultdict(set)
-        loops = set()
-        blocks = []
-        block_id = 0
-        for idx, raw_slice in enumerate(self.raw_sliced):
-            if raw_slice.slice_type != "block_end":
-                block_content_types[block_id].add(raw_slice.slice_type)
-            if raw_slice.slice_type == "block_start":
-                blocks.append(raw_slice)
-                templater_logger.info("%d -> %r", block_id, raw_slice.raw)
-                block_ids[raw_slice] = block_id
-                block_id += 1
-                if raw_slice.slice_subtype == "loop":
-                    loops.add(block_id)
-            elif raw_slice.slice_type == "block_end":
-                blocks.pop()
-                block_id += 1
-                templater_logger.info("%d -> %r", block_id, raw_slice.raw)
-                block_ids[raw_slice] = block_id
-            else:
-                templater_logger.info("%d -> %r", block_id, raw_slice.raw)
-                block_ids[raw_slice] = block_id
-        literal_only_loops = [
-            block_id
-            for block_id in set(block_ids.values())
-            if block_id in loops and block_content_types[block_id] == {"literal"}
-        ]
-        return RawSliceBlockInfo(block_ids, literal_only_loops)
 
     def raw_slices_spanning_source_slice(
         self, source_slice: slice
@@ -389,7 +390,7 @@ class TemplatedFile:
         """
         ret_buff = []
         for elem in self.raw_sliced:
-            if elem.slice_type in ("comment", "block_end", "block_start", "block_mid"):
+            if elem.is_source_only_slice():
                 ret_buff.append(elem)
         return ret_buff
 

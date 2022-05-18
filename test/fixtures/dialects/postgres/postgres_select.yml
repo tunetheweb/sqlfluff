@@ -3,7 +3,7 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: 9c194c3f6c0f3c93a3f931e8028512183a6f489feeb1c7d3d27fdce925cf4f97
+_hash: 2ac14552506be39c7f8cb304071dd62b0f075b16dc4632cc94609fe8bbaac8bc
 file:
 - statement:
     select_statement:
@@ -40,7 +40,7 @@ file:
             - comma: ','
             - expression:
                 numeric_literal:
-                  binary_operator: '-'
+                  sign_indicator: '-'
                   literal: '2'
             - comma: ','
             - expression:
@@ -100,11 +100,12 @@ file:
               data_type:
                 datetime_type_identifier:
                   keyword: TIMESTAMP
-                time_zone_grammar:
-                - keyword: AT
-                - keyword: TIME
-                - keyword: ZONE
-                - literal: "'UTC'"
+            time_zone_grammar:
+            - keyword: AT
+            - keyword: TIME
+            - keyword: ZONE
+            - expression:
+                literal: "'UTC'"
 - statement_terminator: ;
 - statement:
     select_statement:
@@ -137,11 +138,12 @@ file:
                 - keyword: WITH
                 - keyword: TIME
                 - keyword: ZONE
-                time_zone_grammar:
-                - keyword: AT
-                - keyword: TIME
-                - keyword: ZONE
-                - literal: "'UTC'"
+            time_zone_grammar:
+            - keyword: AT
+            - keyword: TIME
+            - keyword: ZONE
+            - expression:
+                literal: "'UTC'"
 - statement_terminator: ;
 - statement:
     select_statement:
@@ -184,29 +186,32 @@ file:
               data_type:
                 datetime_type_identifier:
                   keyword: TIMESTAMPTZ
-                time_zone_grammar:
-                - keyword: AT
-                - keyword: TIME
-                - keyword: ZONE
-                - literal: "'UTC'"
+            time_zone_grammar:
+            - keyword: AT
+            - keyword: TIME
+            - keyword: ZONE
+            - expression:
+                literal: "'UTC'"
 - statement_terminator: ;
 - statement:
     select_statement:
       select_clause:
         keyword: SELECT
         select_clause_element:
-          datetime_literal:
-            datetime_type_identifier:
-            - keyword: timestamp
-            - keyword: with
-            - keyword: time
-            - keyword: zone
-            literal: "'2025-11-20 00:00:00+00'"
+          expression:
+            datetime_literal:
+              datetime_type_identifier:
+              - keyword: timestamp
+              - keyword: with
+              - keyword: time
+              - keyword: zone
+              literal: "'2025-11-20 00:00:00+00'"
             time_zone_grammar:
             - keyword: AT
             - keyword: TIME
             - keyword: ZONE
-            - literal: "'Africa/Cairo'"
+            - expression:
+                literal: "'Africa/Cairo'"
 - statement_terminator: ;
 - statement:
     select_statement:
@@ -226,18 +231,40 @@ file:
       select_clause:
         keyword: SELECT
         select_clause_element:
-          datetime_literal:
-            datetime_type_identifier:
-            - keyword: timestamp
-            - keyword: without
-            - keyword: time
-            - keyword: zone
-            literal: "'2025-11-20 00:00:00'"
+          expression:
+            datetime_literal:
+              datetime_type_identifier:
+              - keyword: timestamp
+              - keyword: without
+              - keyword: time
+              - keyword: zone
+              literal: "'2025-11-20 00:00:00'"
             time_zone_grammar:
             - keyword: AT
             - keyword: TIME
             - keyword: ZONE
-            - literal: "'Africa/Cairo'"
+            - expression:
+                literal: "'Africa/Cairo'"
+- statement_terminator: ;
+- statement:
+    select_statement:
+      select_clause:
+        keyword: SELECT
+        select_clause_element:
+          expression:
+            datetime_literal:
+              datetime_type_identifier:
+              - keyword: timestamp
+              - keyword: without
+              - keyword: time
+              - keyword: zone
+              literal: "'2025-11-20 00:00:00+12'"
+            time_zone_grammar:
+            - keyword: AT
+            - keyword: TIME
+            - keyword: ZONE
+            - expression:
+                literal: "'Africa/Cairo'"
 - statement_terminator: ;
 - statement:
     select_statement:
@@ -251,73 +278,61 @@ file:
             - keyword: time
             - keyword: zone
             literal: "'2025-11-20 00:00:00+12'"
+- statement_terminator: ;
+- statement:
+    select_statement:
+      select_clause:
+        keyword: SELECT
+        select_clause_element:
+          expression:
+            datetime_literal:
+              datetime_type_identifier:
+              - keyword: time
+              - keyword: with
+              - keyword: time
+              - keyword: zone
+              literal: "'00:00:00+00'"
             time_zone_grammar:
             - keyword: AT
             - keyword: TIME
             - keyword: ZONE
-            - literal: "'Africa/Cairo'"
+            - expression:
+                literal: "'Africa/Cairo'"
 - statement_terminator: ;
 - statement:
     select_statement:
       select_clause:
         keyword: SELECT
         select_clause_element:
-          datetime_literal:
-            datetime_type_identifier:
-            - keyword: timestamp
-            - keyword: without
-            - keyword: time
-            - keyword: zone
-            literal: "'2025-11-20 00:00:00+12'"
-- statement_terminator: ;
-- statement:
-    select_statement:
-      select_clause:
-        keyword: SELECT
-        select_clause_element:
-          datetime_literal:
-            datetime_type_identifier:
-            - keyword: time
-            - keyword: with
-            - keyword: time
-            - keyword: zone
-            literal: "'00:00:00+00'"
+          expression:
+            datetime_literal:
+              datetime_type_identifier:
+              - keyword: time
+              - keyword: without
+              - keyword: time
+              - keyword: zone
+              literal: "'00:00:00'"
             time_zone_grammar:
             - keyword: AT
             - keyword: TIME
             - keyword: ZONE
-            - literal: "'Africa/Cairo'"
+            - expression:
+                literal: "'Africa/Cairo'"
 - statement_terminator: ;
 - statement:
     select_statement:
       select_clause:
         keyword: SELECT
         select_clause_element:
-          datetime_literal:
-            datetime_type_identifier:
-            - keyword: time
-            - keyword: without
-            - keyword: time
-            - keyword: zone
-            literal: "'00:00:00'"
+          expression:
+            column_reference:
+              identifier: c_timestamp
             time_zone_grammar:
             - keyword: AT
             - keyword: TIME
             - keyword: ZONE
-            - literal: "'Africa/Cairo'"
-- statement_terminator: ;
-- statement:
-    select_statement:
-      select_clause:
-        keyword: SELECT
-        select_clause_element:
-          column_reference:
-            identifier: c_timestamp
-          time_zone_grammar:
-          - keyword: AT
-          - keyword: TIME
-          - keyword: ZONE
-          - literal: "'Africa/Cairo'"
+            - expression:
+                literal: "'Africa/Cairo'"
       from_clause:
         keyword: FROM
         from_expression:
@@ -341,7 +356,8 @@ file:
                 - keyword: AT
                 - keyword: TIME
                 - keyword: ZONE
-                - literal: "'Africa/Cairo'"
+                - expression:
+                    literal: "'Africa/Cairo'"
               end_bracket: )
             cast_expression:
               casting_operator: '::'
@@ -376,4 +392,186 @@ file:
             table_expression:
               table_reference:
                 identifier: my_table
+- statement_terminator: ;
+- statement:
+    select_statement:
+      select_clause:
+      - keyword: SELECT
+      - select_clause_element:
+          column_reference:
+          - identifier: schema1
+          - dot: .
+          - identifier: table1
+          - dot: .
+          - identifier: columna
+      - comma: ','
+      - select_clause_element:
+          column_reference:
+          - identifier: t
+          - dot: .
+          - identifier: col2
+      from_clause:
+        keyword: FROM
+        from_expression:
+          from_expression_element:
+            table_expression:
+              table_reference:
+              - identifier: schema1
+              - dot: .
+              - identifier: table1
+          join_clause:
+          - keyword: CROSS
+          - keyword: JOIN
+          - keyword: LATERAL
+          - from_expression_element:
+              table_expression:
+                function:
+                  function_name:
+                    function_name_identifier: somefunc
+                  bracketed:
+                    start_bracket: (
+                    expression:
+                      column_reference:
+                      - identifier: tb
+                      - dot: .
+                      - identifier: columnb
+                    end_bracket: )
+              alias_expression:
+                keyword: as
+                identifier: t
+                bracketed:
+                - start_bracket: (
+                - parameter: col1
+                - data_type:
+                    keyword: text
+                - comma: ','
+                - parameter: col2
+                - data_type:
+                    keyword: bool
+                - end_bracket: )
+- statement_terminator: ;
+- statement:
+    select_statement:
+      select_clause:
+        keyword: SELECT
+        select_clause_element:
+          expression:
+          - column_reference:
+              identifier: a
+          - keyword: COLLATE
+          - column_reference:
+              identifier: '"de_DE"'
+          - comparison_operator:
+              raw_comparison_operator: <
+          - column_reference:
+              identifier: b
+      from_clause:
+        keyword: FROM
+        from_expression:
+          from_expression_element:
+            table_expression:
+              table_reference:
+                identifier: test1
+- statement_terminator: ;
+- statement:
+    select_statement:
+      select_clause:
+        keyword: SELECT
+        select_clause_element:
+          expression:
+            column_reference:
+              identifier: a
+            comparison_operator:
+              raw_comparison_operator: <
+            bracketed:
+              start_bracket: (
+              expression:
+                literal: "'foo'"
+                keyword: COLLATE
+                column_reference:
+                  identifier: '"fr_FR"'
+              end_bracket: )
+      from_clause:
+        keyword: FROM
+        from_expression:
+          from_expression_element:
+            table_expression:
+              table_reference:
+                identifier: test1
+- statement_terminator: ;
+- statement:
+    select_statement:
+      select_clause:
+        keyword: SELECT
+        select_clause_element:
+          expression:
+          - column_reference:
+              identifier: a
+          - comparison_operator:
+              raw_comparison_operator: <
+          - column_reference:
+              identifier: b
+          - keyword: COLLATE
+          - column_reference:
+              identifier: '"de_DE"'
+      from_clause:
+        keyword: FROM
+        from_expression:
+          from_expression_element:
+            table_expression:
+              table_reference:
+                identifier: test1
+- statement_terminator: ;
+- statement:
+    select_statement:
+      select_clause:
+        keyword: SELECT
+        select_clause_element:
+          expression:
+          - column_reference:
+              identifier: a
+          - keyword: COLLATE
+          - column_reference:
+              identifier: '"de_DE"'
+          - comparison_operator:
+              raw_comparison_operator: <
+          - column_reference:
+              identifier: b
+      from_clause:
+        keyword: FROM
+        from_expression:
+          from_expression_element:
+            table_expression:
+              table_reference:
+                identifier: test1
+- statement_terminator: ;
+- statement:
+    select_statement:
+      select_clause:
+        keyword: SELECT
+        select_clause_element:
+          wildcard_expression:
+            wildcard_identifier:
+              star: '*'
+      from_clause:
+        keyword: FROM
+        from_expression:
+          from_expression_element:
+            table_expression:
+              table_reference:
+                identifier: test1
+      orderby_clause:
+      - keyword: ORDER
+      - keyword: BY
+      - expression:
+        - column_reference:
+            identifier: a
+        - binary_operator:
+          - pipe: '|'
+          - pipe: '|'
+        - column_reference:
+            identifier: b
+        - keyword: COLLATE
+        - column_reference:
+            identifier: '"fr_FR"'
 - statement_terminator: ;

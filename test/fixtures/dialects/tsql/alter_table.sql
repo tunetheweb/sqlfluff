@@ -37,3 +37,15 @@ GO
 ALTER TABLE Production.TransactionHistoryArchive
 ALTER COLUMN rec_number VARCHAR(36)
 GO
+
+ALTER TABLE Production.TransactionHistoryArchive
+DROP CONSTRAINT PK_TransactionHistoryArchive_TransactionID
+
+ALTER TABLE [Production].[ProductCostHistory]
+WITH CHECK ADD CONSTRAINT [FK_ProductCostHistory_Product_ProductID] FOREIGN KEY([ProductID])
+REFERENCES [Production].[Product] ([ProductID])
+GO
+
+ALTER TABLE [Production].[ProductCostHistory]
+CHECK CONSTRAINT [FK_ProductCostHistory_Product_ProductID]
+GO

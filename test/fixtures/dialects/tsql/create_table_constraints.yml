@@ -3,7 +3,7 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: 45d3ef7caec5daf3a027287840ef348b256052a62da37721697160ca4042d3a6
+_hash: a796718d04f9ad17b20dff0919bdd408d031e1e73c03c1a4a3129084fa55778b
 file:
 - batch:
     statement:
@@ -19,7 +19,7 @@ file:
         - column_definition:
             identifier: '[Column A]'
             data_type:
-              identifier: '[int]'
+              data_type_identifier: '[int]'
             column_constraint_segment:
               identity_grammar:
                 keyword: IDENTITY
@@ -27,7 +27,7 @@ file:
         - column_definition:
           - identifier: '[Column B]'
           - data_type:
-              identifier: '[int]'
+              data_type_identifier: '[int]'
           - column_constraint_segment:
               identity_grammar:
                 keyword: IDENTITY
@@ -44,7 +44,7 @@ file:
         - column_definition:
             identifier: '[ColumnC]'
             data_type:
-              identifier: varchar
+              data_type_identifier: varchar
               bracketed:
                 start_bracket: (
                 expression:
@@ -57,7 +57,7 @@ file:
         - column_definition:
             identifier: '[ColumnDecimal]'
             data_type:
-              identifier: DATE
+              data_type_identifier: DATE
             column_constraint_segment:
               keyword: DEFAULT
               function:
@@ -70,7 +70,7 @@ file:
         - column_definition:
           - identifier: '[col1]'
           - data_type:
-              identifier: int
+              data_type_identifier: int
           - column_constraint_segment:
               keyword: default
               bracketed:
@@ -78,7 +78,7 @@ file:
                 bracketed:
                   start_bracket: (
                   numeric_literal:
-                    binary_operator: '-'
+                    sign_indicator: '-'
                     literal: '1'
                   end_bracket: )
                 end_bracket: )
@@ -89,13 +89,13 @@ file:
         - column_definition:
           - identifier: '[col1]'
           - data_type:
-              identifier: int
+              data_type_identifier: int
           - column_constraint_segment:
               keyword: default
               bracketed:
                 start_bracket: (
                 numeric_literal:
-                  binary_operator: '-'
+                  sign_indicator: '-'
                   literal: '1'
                 end_bracket: )
           - column_constraint_segment:
@@ -105,11 +105,11 @@ file:
         - column_definition:
           - identifier: '[col1]'
           - data_type:
-              identifier: int
+              data_type_identifier: int
           - column_constraint_segment:
               keyword: default
               numeric_literal:
-                binary_operator: '-'
+                sign_indicator: '-'
                 literal: '1'
           - column_constraint_segment:
             - keyword: not
@@ -118,7 +118,7 @@ file:
         - column_definition:
           - identifier: '[col1]'
           - data_type:
-              identifier: INT
+              data_type_identifier: INT
           - column_constraint_segment:
               keyword: DEFAULT
               bracketed:
@@ -144,9 +144,9 @@ file:
           column_definition:
             identifier: '[col1]'
             data_type:
-              identifier: INT
+              data_type_identifier: INT
           comma: ','
-          table_constraint_segment:
+          table_constraint:
           - keyword: PRIMARY
           - keyword: KEY
           - keyword: CLUSTERED
@@ -174,9 +174,9 @@ file:
           column_definition:
             identifier: '[col1]'
             data_type:
-              identifier: INT
+              data_type_identifier: INT
           comma: ','
-          table_constraint_segment:
+          table_constraint:
           - keyword: CONSTRAINT
           - object_reference:
               identifier: '[Pk_Id]'
@@ -207,7 +207,7 @@ file:
         - column_definition:
           - identifier: '[ColumnB]'
           - data_type:
-              identifier: '[varchar]'
+              data_type_identifier: '[varchar]'
               bracketed:
                 start_bracket: (
                 expression:
@@ -229,7 +229,7 @@ file:
         - column_definition:
           - identifier: '[ColumnC]'
           - data_type:
-              identifier: varchar
+              data_type_identifier: varchar
               bracketed:
                 start_bracket: (
                 expression:
@@ -245,7 +245,7 @@ file:
         - column_definition:
             identifier: '[ColumnDecimal]'
             data_type:
-              identifier: decimal
+              data_type_identifier: decimal
               bracketed:
               - start_bracket: (
               - expression:
@@ -265,7 +265,7 @@ file:
         - column_definition:
             identifier: '[columnE]'
             data_type:
-              identifier: varchar
+              data_type_identifier: varchar
               bracketed:
                 start_bracket: (
                 expression:
@@ -296,7 +296,7 @@ file:
         - column_definition:
             identifier: '[column1]'
             data_type:
-              identifier: varchar
+              data_type_identifier: varchar
               bracketed:
                 start_bracket: (
                 expression:

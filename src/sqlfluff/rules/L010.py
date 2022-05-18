@@ -1,15 +1,18 @@
 """Implementation of Rule L010."""
 
 import regex
-from typing import Tuple, List
+from typing import Tuple, List, Optional
+from sqlfluff.core.parser import BaseSegment
 from sqlfluff.core.rules.base import BaseRule, LintResult, LintFix, RuleContext
 from sqlfluff.core.rules.config_info import get_config_info
 from sqlfluff.core.rules.doc_decorators import (
-    document_fix_compatible,
     document_configuration,
+    document_fix_compatible,
+    document_groups,
 )
 
 
+@document_groups
 @document_fix_compatible
 @document_configuration
 class Rule_L010(BaseRule):
@@ -42,14 +45,24 @@ class Rule_L010(BaseRule):
         from foo
     """
 
+    groups: Tuple[str, ...] = ("all", "core")
+    lint_phase = "post"
     # Binary operators behave like keywords too.
     _target_elems: List[Tuple[str, str]] = [
         ("type", "keyword"),
         ("type", "binary_operator"),
         ("type", "date_part"),
-        ("type", "data_type_identifier"),
     ]
-    config_keywords = ["capitalisation_policy", "ignore_words"]
+    # Skip boolean and null literals (which are also keywords)
+    # as they have their own rule (L040)
+    _exclude_elements: List[Tuple[str, str]] = [
+        ("name", "null_literal"),
+        ("name", "boolean_literal"),
+        ("parenttype", "data_type"),
+        ("parenttype", "datetime_type_identifier"),
+        ("parenttype", "primitive_type"),
+    ]
+    config_keywords = ["capitalisation_policy", "ignore_words", "ignore_words_regex"]
     # Human readable target elem for description
     _description_elem = "Keywords"
 
@@ -61,8 +74,18 @@ class Rule_L010(BaseRule):
         for what the possible case is.
 
         """
+        # Config type hints
+        self.ignore_words_regex: str
+
         # Skip if not an element of the specified type/name
-        if not self.matches_target_tuples(context.segment, self._target_elems):
+        parent: Optional[BaseSegment] = (
+            context.parent_stack[-1] if context.parent_stack else None
+        )
+        if not self.matches_target_tuples(
+            context.segment, self._target_elems, parent
+        ) or self.matches_target_tuples(
+            context.segment, self._exclude_elements, parent
+        ):
             return LintResult(memory=context.memory)
 
         # Get the capitalisation policy configuration.
@@ -81,6 +104,16 @@ class Rule_L010(BaseRule):
 
         # Skip if in ignore list
         if ignore_words_list and context.segment.raw.lower() in ignore_words_list:
+            return LintResult(memory=context.memory)
+
+        # Skip if matches ignore regex
+        if self.ignore_words_regex and regex.search(
+            self.ignore_words_regex, context.segment.raw
+        ):
+            return LintResult(memory=context.memory)
+
+        # Skip if templated.
+        if context.segment.is_templated:
             return LintResult(memory=context.memory)
 
         memory = context.memory

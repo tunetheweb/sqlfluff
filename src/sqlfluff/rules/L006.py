@@ -12,9 +12,10 @@ from sqlfluff.core.rules.base import (
     RuleContext,
     EvalResultType,
 )
-from sqlfluff.core.rules.doc_decorators import document_fix_compatible
+from sqlfluff.core.rules.doc_decorators import document_fix_compatible, document_groups
 
 
+@document_groups
 @document_fix_compatible
 class Rule_L006(BaseRule):
     """Operators should be surrounded by a single whitespace.
@@ -40,6 +41,12 @@ class Rule_L006(BaseRule):
             a + b
         FROM foo
     """
+
+    groups = ("all", "core")
+    # L006 works on operators so requires three operators.
+    # However some rules that inherit from here (e.g. L048) do not.
+    # So allow this to be configurable.
+    _require_three_children: bool = True
 
     _target_elems: List[Tuple[str, str]] = [
         ("type", "binary_operator"),
@@ -100,7 +107,7 @@ class Rule_L006(BaseRule):
         # be dealt with by the parent segment. That also means that we need
         # to have at least three children.
 
-        if len(context.segment.segments) <= 2:
+        if self._require_three_children and len(context.segment.segments) <= 2:
             return LintResult()
 
         violations = []
@@ -162,7 +169,7 @@ class Rule_L006(BaseRule):
                         LintResult(
                             anchor=before_anchor,
                             description="Missing whitespace before {}".format(
-                                before_anchor.raw[:10]
+                                before_anchor.raw
                             ),
                             fixes=[
                                 LintFix.create_before(
@@ -189,7 +196,7 @@ class Rule_L006(BaseRule):
                         LintResult(
                             anchor=after_anchor,
                             description="Missing whitespace after {}".format(
-                                after_anchor.raw[-10:]
+                                after_anchor.raw
                             ),
                             fixes=[
                                 LintFix.create_before(

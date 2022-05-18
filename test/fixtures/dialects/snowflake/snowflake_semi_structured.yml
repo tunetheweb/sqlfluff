@@ -3,9 +3,9 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: 9836b4842aa75048c7da6d4d88487fed192e81f0483348796f52a031c66827d2
+_hash: c357c39cff84cefb40112f8f244be931a4177efeb1f826717442e3b7b6e3e465
 file:
-  statement:
+- statement:
     select_statement:
       select_clause:
       - keyword: SELECT
@@ -99,6 +99,21 @@ file:
           alias_expression:
             keyword: AS
             identifier: another_val
+      - comma: ','
+      - select_clause_element:
+          expression:
+            column_reference:
+              identifier: array_field
+            array_accessor:
+              start_square_bracket: '['
+              literal: '0'
+              end_square_bracket: ']'
+            snowflake_semi_structured_expression:
+              dot: .
+              semi_structured_element: array_element_property
+          alias_expression:
+            keyword: as
+            identifier: test_array_access
       from_clause:
       - keyword: FROM
       - from_expression:
@@ -122,3 +137,69 @@ file:
                     column_reference:
                       identifier: custom_fields
                   end_bracket: )
+- statement_terminator: ;
+- statement:
+    select_statement:
+      select_clause:
+      - keyword: SELECT
+      - select_clause_element:
+          expression:
+            column_reference:
+              identifier: value
+            snowflake_semi_structured_expression:
+            - colon: ':'
+            - semi_structured_element: point
+            - colon: ':'
+            - semi_structured_element: from
+            - colon: ':'
+            - semi_structured_element: latitude
+            cast_expression:
+              casting_operator: '::'
+              data_type:
+                data_type_identifier: NUMBER
+                bracketed:
+                - start_bracket: (
+                - expression:
+                    literal: '10'
+                - comma: ','
+                - expression:
+                    literal: '6'
+                - end_bracket: )
+          alias_expression:
+            keyword: AS
+            identifier: lat
+      - comma: ','
+      - select_clause_element:
+          expression:
+            column_reference:
+              identifier: value
+            snowflake_semi_structured_expression:
+            - colon: ':'
+            - semi_structured_element: point
+            - colon: ':'
+            - semi_structured_element: from
+            - colon: ':'
+            - semi_structured_element: longitude
+            cast_expression:
+              casting_operator: '::'
+              data_type:
+                data_type_identifier: NUMBER
+                bracketed:
+                - start_bracket: (
+                - expression:
+                    literal: '10'
+                - comma: ','
+                - expression:
+                    literal: '6'
+                - end_bracket: )
+          alias_expression:
+            keyword: AS
+            identifier: lng
+      from_clause:
+        keyword: FROM
+        from_expression:
+          from_expression_element:
+            table_expression:
+              table_reference:
+                identifier: table1
+- statement_terminator: ;

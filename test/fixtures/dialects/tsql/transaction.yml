@@ -3,7 +3,7 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: 58b28c183be9e0c849a3cfcb288fd9c284186f343a5cf8b9c2d936b09a72f0f5
+_hash: 7881f3e67891fd6240f0801b7defe10fdd8b4e0330f5d4c3f6593e982facbb4a
 file:
   batch:
   - statement:
@@ -13,17 +13,13 @@ file:
       - statement_terminator: ;
   - statement:
       delete_statement:
-        keyword: DELETE
-        from_clause:
-          keyword: FROM
-          from_expression:
-            from_expression_element:
-              table_expression:
-                table_reference:
-                - identifier: HumanResources
-                - dot: .
-                - identifier: JobCandidate
-        where_clause:
+      - keyword: DELETE
+      - keyword: FROM
+      - table_reference:
+        - identifier: HumanResources
+        - dot: .
+        - identifier: JobCandidate
+      - where_clause:
           keyword: WHERE
           expression:
             column_reference:
@@ -31,7 +27,7 @@ file:
             comparison_operator:
               raw_comparison_operator: '='
             literal: '13'
-        statement_terminator: ;
+      - statement_terminator: ;
   - statement:
       transaction_statement:
         keyword: COMMIT
@@ -43,17 +39,13 @@ file:
       - statement_terminator: ;
   - statement:
       delete_statement:
-        keyword: DELETE
-        from_clause:
-          keyword: FROM
-          from_expression:
-            from_expression_element:
-              table_expression:
-                table_reference:
-                - identifier: HumanResources
-                - dot: .
-                - identifier: JobCandidate
-        where_clause:
+      - keyword: DELETE
+      - keyword: FROM
+      - table_reference:
+        - identifier: HumanResources
+        - dot: .
+        - identifier: JobCandidate
+      - where_clause:
           keyword: WHERE
           expression:
             column_reference:
@@ -61,7 +53,7 @@ file:
             comparison_operator:
               raw_comparison_operator: '='
             literal: '13'
-        statement_terminator: ;
+      - statement_terminator: ;
   - statement:
       transaction_statement:
       - keyword: ROLLBACK
@@ -77,3 +69,25 @@ file:
       - keyword: SAVE
       - keyword: TRANSACTION
       - statement_terminator: ;
+  - statement:
+      transaction_statement:
+      - keyword: BEGIN
+      - keyword: TRAN
+      - identifier: namey
+      - statement_terminator: ;
+  - statement:
+      transaction_statement:
+        keyword: ROLLBACK
+        identifier: namey
+        statement_terminator: ;
+  - statement:
+      transaction_statement:
+      - keyword: SAVE
+      - keyword: TRAN
+      - parameter: '@variable'
+      - statement_terminator: ;
+  - statement:
+      transaction_statement:
+        keyword: COMMIT
+        parameter: '@variable'
+        statement_terminator: ;

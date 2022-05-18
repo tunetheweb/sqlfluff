@@ -3,7 +3,7 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: 36bd34e1f1f2b3bc5c1c0eddcc058a1f01320389deeef61ed468064008dc3765
+_hash: 6bcbb12f775b9554e6c61b3abf5647f272e6fd5324724990a094744855d097d3
 file:
 - statement:
     create_external_table_statement:
@@ -269,7 +269,8 @@ file:
       - column_reference:
           identifier: saledate
       - data_type:
-          keyword: date
+          datetime_type_identifier:
+            keyword: date
       - comma: ','
       - column_reference:
           identifier: qtysold
@@ -290,7 +291,8 @@ file:
       - column_reference:
           identifier: saletime
       - data_type:
-          keyword: timestamp
+          datetime_type_identifier:
+            keyword: timestamp
       - end_bracket: )
     - keyword: row
     - keyword: format
@@ -339,7 +341,8 @@ file:
       - column_reference:
           identifier: event_time
       - data_type:
-          keyword: timestamp
+          datetime_type_identifier:
+            keyword: timestamp
       - comma: ','
       - column_reference:
           identifier: event_type
@@ -482,4 +485,36 @@ file:
     - literal: "'com.amazon.ionhiveserde.formats.IonOutputFormat'"
     - keyword: LOCATION
     - literal: "'s3://s3-bucket/prefix'"
+- statement_terminator: ;
+- statement:
+    create_external_table_statement:
+    - keyword: CREATE
+    - keyword: EXTERNAL
+    - keyword: TABLE
+    - table_reference:
+      - identifier: spectrum
+      - dot: .
+      - identifier: partitioned_lineitem
+    - partitioned_by_segment:
+      - keyword: PARTITIONED
+      - keyword: BY
+      - bracketed:
+        - start_bracket: (
+        - column_reference:
+            identifier: l_shipdate
+        - comma: ','
+        - column_reference:
+            identifier: l_shipmode
+        - end_bracket: )
+    - keyword: STORED
+    - keyword: AS
+    - keyword: parquet
+    - keyword: LOCATION
+    - literal: "'S3://mybucket/cetas/partitioned_lineitem/'"
+    - keyword: AS
+    - select_statement:
+        select_clause:
+          keyword: SELECT
+          select_clause_element:
+            literal: '1'
 - statement_terminator: ;

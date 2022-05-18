@@ -3,7 +3,7 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: a845c6f7f827ee9c48ec52901ce26dd296ae60417f8e24bbbe3aa626ffef09b0
+_hash: 2dd2227b20143d65d7330d5c11b5d2995e4f298ba50c066df7ded96082e0c1b6
 file:
 - statement:
     unload_statement:
@@ -209,8 +209,7 @@ file:
     - keyword: delimiter
     - keyword: as
     - literal: "'\\t'"
-    - compression_type_segment:
-        keyword: gzip
+    - keyword: gzip
 - statement_terminator: ;
 - statement:
     unload_statement:
@@ -235,8 +234,8 @@ file:
         start_bracket: (
         literal: "'select venuecity, venuestate, caldate, pricepaid,\nsum(pricepaid)\
           \ over(partition by venuecity, venuestate\norder by caldate rows between\
-          \ 3 preceding and 3 following) as winsum\nfrom sales join date on sales.dateid=date.dateid\
-          \ \njoin event on event.eventid=sales.eventid\njoin venue on event.venueid=venue.venueid\n\
+          \ 3 preceding and 3 following) as winsum\nfrom sales join date on sales.dateid=date.dateid\n\
+          join event on event.eventid=sales.eventid\njoin venue on event.venueid=venue.venueid\n\
           order by 1,2'"
         end_bracket: )
     - keyword: to

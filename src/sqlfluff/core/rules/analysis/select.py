@@ -11,7 +11,7 @@ class SelectStatementColumnsAndTables(NamedTuple):
 
     select_statement: BaseSegment
     table_aliases: List[AliasInfo]
-    standalone_aliases: List[str]
+    standalone_aliases: List[str]  # value table function aliases
     reference_buffer: List[BaseSegment]
     select_targets: List[BaseSegment]
     col_aliases: List[ColumnAliasInfo]
@@ -30,7 +30,7 @@ def get_select_statement_info(
     # Iterate through all the references, both in the select clause, but also
     # potential others.
     sc = segment.get_child("select_clause")
-    # Sometimes there is no select clause (e.g. "SELECT *" is a seleect_clause_element)
+    # Sometimes there is no select clause (e.g. "SELECT *" is a select_clause_element)
     if not sc:
         return None
     reference_buffer = list(sc.recursive_crawl("object_reference"))
@@ -39,6 +39,7 @@ def get_select_statement_info(
         "groupby_clause",
         "having_clause",
         "orderby_clause",
+        "qualify_clause",
     ):
         clause = segment.get_child(potential_clause)
         if clause:
@@ -64,7 +65,7 @@ def get_select_statement_info(
                     seen_using = True
                 elif seg.is_type("join_on_condition"):
                     for on_seg in seg.segments:
-                        if on_seg.is_type("expression"):
+                        if on_seg.is_type("bracketed", "expression"):
                             # Deal with expressions
                             reference_buffer += list(
                                 seg.recursive_crawl("object_reference")
@@ -79,7 +80,7 @@ def get_select_statement_info(
     for ref in reference_buffer.copy():
         ref_path = segment.path_to(ref)
         # is it in a subselect? i.e. a select which isn't this one.
-        if any(
+        if ref_path and any(
             seg.is_type("select_statement") and seg is not segment for seg in ref_path
         ):
             reference_buffer.remove(ref)
@@ -116,7 +117,7 @@ def get_aliases_from_select(segment, dialect=None):
         if _has_value_table_function(table_expr, dialect):
             if alias_info[0] not in standalone_aliases:
                 standalone_aliases.append(alias_info[0])
-        elif alias_info not in standalone_aliases:
+        elif alias_info not in table_aliases:
             table_aliases.append(alias_info)
 
     return table_aliases, standalone_aliases
@@ -144,10 +145,10 @@ def _get_pivot_table_columns(segment, dialect):
         # we don't have it, assume the clause does not have a pivot table
         return []  # pragma: no cover
 
-    fc = segment.get_child("from_pivot_expression")
+    fc = segment.recursive_crawl("from_pivot_expression")
     if not fc:
         # If there's no pivot clause then just abort.
-        return []
+        return []  # pragma: no cover
 
     pivot_table_column_aliases = []
 

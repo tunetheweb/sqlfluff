@@ -82,22 +82,30 @@ changes.
 
 ### Developing and Running SQLFluff Locally
 
-The simplest way to set up a development environment is to use `tox`.
-First ensure that you have tox installed (windows users may have to replace `python3` with `py`):
-```shell
-python3 -m pip install -U tox
-```
+#### Requirements
 
-A virtual environment can then be created and activated by running:
+The simplest way to set up a development environment is to use `tox`.
+First ensure that you have tox installed:
 ```shell
-tox -e py --devenv .venv
+python3.8 -m pip install -U tox
+```
+**IMPORTANT:** `tox` must be installed with a minimum of Python 3.8 as the `mypy` checks are incompatible with 3.7. Those using newer versions of Python may replace `python3.8` as necessary (the test suite runs primarily under 3.10 for example).
+
+Note: Unfortunately tox does not currently support setting just a minimum Python version (though this may be be coming in tox 4!).
+
+#### Creating a virtual environment
+
+A virtual environment can then be created and activated by running (check the [requirements](#requirements) before running this):
+```shell
+tox -e dbt021-py38 --devenv .venv
 source .venv/bin/activate
 ```
-(The `py` environment defaults to the python version used
-to install tox, however any version you want can be installed
-by replacing `py` with `py37`, `py39`, `dbt020-py38`, etc. If
-you are planning development on or using the dbt templater
-you may wish to chose one of the dbt environments.)
+(The `dbt021-py38` environment is a good default choice.
+However any version can be installed by replacing `dbt021-py38` with
+`py`, `py37`, `py39`, `dbt020-py38`, etc.
+`py` defaults to the python version that was used to install tox.
+However, to be able to run all tests including the dbt templater,
+choose one of the dbt environments.)
 
 Windows users should call `.venv\Scripts\activate` rather than `source .venv/bin/activate`.
 
@@ -129,7 +137,7 @@ pip install -e plugins/sqlfluff-templater-dbt/.
 
 ### Testing
 
-To test locally, SQLFluff uses `tox`. The test suite can be run via:
+To test locally, SQLFluff uses `tox` (check the [requirements](#requirements)!). The test suite can be run via:
 
 ```shell
 tox
@@ -199,7 +207,6 @@ Steps to use the Docker Compose environment:
 * Install Docker on your machine.
 * Run `plugins/sqlfluff-templater-dbt/docker/startup` to create the containers.
 * Run `plugins/sqlfluff-templater-dbt/docker/shell` to start a bash session in the `app` container.
-* Manually edit the `host` value in `plugins/sqlfluff-templater-dbt/test/fixtures/dbt/profiles_yml/profiles.yml`, changing it to `postgres`. (This will likely be automated somehow in the future.)
 
 Inside the container, run:
 ```
@@ -208,7 +215,13 @@ py.test -v plugins/sqlfluff-templater-dbt/test/
 
 ### Pre-Commit Config
 
-For development convenience we also provide a `.pre-commit-config.yaml` file to allow the user to install a selection of pre-commit hooks via `tox -e pre-commit -- install`. These hooks can help the user identify and fix potential linting/typing violations prior to committing their code and therefore reduce having to deal with these sort of issues during code review.
+For development convenience we also provide a `.pre-commit-config.yaml` file to allow the user to install a selection of pre-commit hooks by running (check the [requirements](#requirements) before running this):
+
+```
+tox -e pre-commit -- install
+```
+
+These hooks can help the user identify and fix potential linting/typing violations prior to committing their code and therefore reduce having to deal with these sort of issues during code review.
 
 ### Documentation Website
 
@@ -223,9 +236,9 @@ whenever a new release is published to GitHub.
 
 #### Release checklist:
 
-The [release page](https://github.com/sqlfluff/sqlfluff/releases) shows maintainers all merges since last release. Once we have a long enough list, we should prepare a release, following below checklist:
+The [release page](https://github.com/sqlfluff/sqlfluff/releases) shows maintainers all merges since last release. Once we have a long enough list, we should prepare a release. We should follow the below checklist, part of which is automated by the ["Create release pull request" GitHub Action](https://github.com/sqlfluff/sqlfluff/.github/workflows/create-release-pull-request.yaml):
 
-- [ ] Change the version in `setup.cfg` and `plugins/sqlfluff-templator-dbt/setup.cfg`
+- [ ] Change the version in `setup.cfg` and `plugins/sqlfluff-templater-dbt/setup.cfg`
 - [ ] Update the stable_version in the `[sqlfluff_docs]` section of `setup.cfg`
 - [ ] Copy the draft releases from https://github.com/sqlfluff/sqlfluff/releases to [CHANGELOG.md](CHANGELOG.md). These draft release notes have been created by a GitHub Action on each PR merge.
 - [ ] If you pretend to create a new draft in GitHub and hit "Auto Generate Release Notes", then it will basically recreate these notes (though in a slightly different format), but also add a nice "First contributors" section, so can copy that "First contributors" section too and then abandon that new draft ([an issues](https://github.com/release-drafter/release-drafter/issues/1001) has been raised to ask for this in Release Drafter GitHub Action).

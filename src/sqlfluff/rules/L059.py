@@ -1,6 +1,6 @@
 """Implementation of Rule L059."""
 
-from typing import Optional
+from typing import List, Optional
 
 import regex
 
@@ -9,11 +9,14 @@ from sqlfluff.core.rules.base import BaseRule, LintFix, LintResult, RuleContext
 from sqlfluff.core.rules.doc_decorators import (
     document_configuration,
     document_fix_compatible,
+    document_groups,
 )
+import sqlfluff.core.rules.functional.segment_predicates as sp
 
 
-@document_configuration
+@document_groups
 @document_fix_compatible
+@document_configuration
 class Rule_L059(BaseRule):
     """Unnecessary quoted identifier.
 
@@ -22,6 +25,13 @@ class Rule_L059(BaseRule):
 
     When ``prefer_quoted_identifiers = False`` (default behaviour), the quotes are
     unnecessary, except for reserved keywords and special characters in identifiers.
+
+    .. note::
+       This rule is disabled by default for Snowflake because it allows quotes as
+       part of the column name. In other words, ``date`` and ``"date"`` are two
+       different columns.
+
+       It can be enabled with the ``force_enable = True`` flag.
 
     **Anti-pattern**
 
@@ -69,12 +79,40 @@ class Rule_L059(BaseRule):
 
     """
 
-    config_keywords = ["prefer_quoted_identifiers"]
+    groups = ("all",)
+    config_keywords = [
+        "prefer_quoted_identifiers",
+        "ignore_words",
+        "ignore_words_regex",
+        "force_enable",
+    ]
+    _dialects_allowing_quotes_in_column_names = ["snowflake"]
+
+    # Ignore "password_auth" type to allow quotes around passwords within
+    # `CREATE USER` statements in Exasol dialect.
+    _ignore_types: List[str] = ["password_auth"]
 
     def _eval(self, context: RuleContext) -> Optional[LintResult]:
         """Unnecessary quoted identifier."""
         # Config type hints
         self.prefer_quoted_identifiers: bool
+        self.ignore_words: str
+        self.ignore_words_regex: str
+        self.force_enable: bool
+        # Some dialects allow quotes as PART OF the column name. In other words,
+        # these are two different columns:
+        # - date
+        # - "date"
+        # For safety, disable this rule by default in those dialects.
+        if (
+            context.dialect.name in self._dialects_allowing_quotes_in_column_names
+            and not self.force_enable
+        ):
+            return LintResult()
+
+        # Ignore some segment types
+        if context.functional.parent_stack.any(sp.is_type(*self._ignore_types)):
+            return None
 
         if self.prefer_quoted_identifiers:
             context_policy = "naked_identifier"
@@ -83,8 +121,31 @@ class Rule_L059(BaseRule):
             context_policy = "quoted_identifier"
             identifier_contents = context.segment.raw[1:-1]
 
+        # Get the ignore_words_list configuration.
+        try:
+            ignore_words_list = self.ignore_words_list
+        except AttributeError:
+            # First-time only, read the settings from configuration. This is
+            # very slow.
+            ignore_words_list = self._init_ignore_words_list()
+
+        # Skip if in ignore list
+        if ignore_words_list and identifier_contents.lower() in ignore_words_list:
+            return None
+
+        # Skip if matches ignore regex
+        if self.ignore_words_regex and regex.search(
+            self.ignore_words_regex, identifier_contents
+        ):
+            return LintResult(memory=context.memory)
+
         # Ignore the segments that are not of the same type as the defined policy above.
-        if context.segment.name not in context_policy:
+        # Also TSQL has a keyword called QUOTED_IDENTIFIER which maps to the name so
+        # need to explicity check for that.
+        if context.segment.name != context_policy or context.segment.raw.lower() in (
+            "quoted_identifier",
+            "naked_identifier",
+        ):
             return None
 
         # Manage cases of identifiers must be quoted first.
@@ -141,3 +202,15 @@ class Rule_L059(BaseRule):
             )
 
         return None
+
+    def _init_ignore_words_list(self):
+        """Called first time rule is evaluated to fetch & cache the policy."""
+        ignore_words_config: str = str(getattr(self, "ignore_words"))
+        if ignore_words_config and ignore_words_config != "None":
+            self.ignore_words_list = self.split_comma_separated_string(
+                ignore_words_config.lower()
+            )
+        else:
+            self.ignore_words_list = []
+
+        return self.ignore_words_list

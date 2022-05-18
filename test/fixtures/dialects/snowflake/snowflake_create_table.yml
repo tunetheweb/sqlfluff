@@ -3,7 +3,7 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: 9f5cdca9507282489cceb72dd098ffd9b0b60cb713695bf05c484cfb3004e890
+_hash: 6f73ff2654c4a54f26ffee0eb19f317f64501c6a1b365c6a9e1640c3f5d72e35
 file:
 - statement:
     create_table_statement:
@@ -62,6 +62,100 @@ file:
     - keyword: table
     - table_reference:
         identifier: mytable
+    - bracketed:
+        start_bracket: (
+        column_definition:
+          identifier: amount
+          data_type:
+            data_type_identifier: number
+        end_bracket: )
+- statement_terminator: ;
+- statement:
+    create_table_statement:
+    - keyword: create
+    - keyword: table
+    - table_reference:
+        identifier: mytable
+    - bracketed:
+        start_bracket: (
+        column_definition:
+          identifier: amount
+          data_type:
+            data_type_identifier: number
+        end_bracket: )
+    - keyword: CLUSTER
+    - keyword: BY
+    - bracketed:
+        start_bracket: (
+        expression:
+          column_reference:
+            identifier: amount
+        end_bracket: )
+- statement_terminator: ;
+- statement:
+    create_table_statement:
+    - keyword: create
+    - keyword: table
+    - table_reference:
+        identifier: mytable
+    - bracketed:
+        start_bracket: (
+        column_definition:
+          identifier: amount
+          data_type:
+            data_type_identifier: number
+        end_bracket: )
+    - keyword: CLUSTER
+    - keyword: BY
+    - function:
+        function_name:
+          function_name_identifier: LINEAR
+        bracketed:
+          start_bracket: (
+          expression:
+            column_reference:
+              identifier: amount
+          end_bracket: )
+- statement_terminator: ;
+- statement:
+    create_table_statement:
+    - keyword: create
+    - keyword: table
+    - table_reference:
+        identifier: mytable
+    - keyword: CLUSTER
+    - keyword: BY
+    - bracketed:
+        start_bracket: (
+        expression:
+          column_reference:
+            identifier: amount
+        end_bracket: )
+    - bracketed:
+        start_bracket: (
+        column_definition:
+          identifier: amount
+          data_type:
+            data_type_identifier: number
+        end_bracket: )
+- statement_terminator: ;
+- statement:
+    create_table_statement:
+    - keyword: create
+    - keyword: table
+    - table_reference:
+        identifier: mytable
+    - keyword: CLUSTER
+    - keyword: BY
+    - function:
+        function_name:
+          function_name_identifier: LINEAR
+        bracketed:
+          start_bracket: (
+          expression:
+            column_reference:
+              identifier: amount
+          end_bracket: )
     - bracketed:
         start_bracket: (
         column_definition:
@@ -609,7 +703,8 @@ file:
           - keyword: CURRENT_TIMESTAMP
           - bracketed:
               start_bracket: (
-              literal: '2'
+              expression:
+                literal: '2'
               end_bracket: )
       - comma: ','
       - column_definition:
@@ -714,3 +809,35 @@ file:
             keyword: AUTOINCREMENT
         end_bracket: )
 - statement_terminator: ;
+- statement:
+    create_table_statement:
+    - keyword: CREATE
+    - keyword: TABLE
+    - table_reference:
+        identifier: test_table
+    - bracketed:
+        start_bracket: (
+        column_definition:
+          identifier: test_column
+          data_type:
+            data_type_identifier: NUMBER
+          column_constraint_segment:
+          - keyword: WITH
+          - keyword: MASKING
+          - keyword: POLICY
+          - function_name:
+              function_name_identifier: my_policy
+          - keyword: USING
+          - bracketed:
+              start_bracket: (
+              column_reference:
+                identifier: test_column
+              comma: ','
+              expression:
+                column_reference:
+                  identifier: test_column
+                comparison_operator:
+                  raw_comparison_operator: '>'
+                literal: '10'
+              end_bracket: )
+        end_bracket: )

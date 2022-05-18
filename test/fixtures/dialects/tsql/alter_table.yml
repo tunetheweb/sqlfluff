@@ -3,7 +3,7 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: 93bc364addedc027120bcb4e2cdaef9c6acf6d7108664231a7af4369a44196ec
+_hash: f764e68ea672dbbfd2b726a0c582ba7615524a549eaedb43255b0c6974edad3f
 file:
 - batch:
     statement:
@@ -19,7 +19,7 @@ file:
           column_definition:
             identifier: column_a
             data_type:
-              identifier: INT
+              data_type_identifier: INT
           end_bracket: )
       - statement_terminator: ;
 - go_statement:
@@ -37,7 +37,7 @@ file:
       - column_definition:
           identifier: column_b
           data_type:
-            identifier: VARCHAR
+            data_type_identifier: VARCHAR
             bracketed:
               start_bracket: (
               expression:
@@ -62,7 +62,7 @@ file:
           column_definition:
             identifier: column_a
             data_type:
-              identifier: INT
+              data_type_identifier: INT
           end_bracket: )
       - statement_terminator: ;
 - go_statement:
@@ -80,7 +80,7 @@ file:
       - column_definition:
         - identifier: column_b
         - data_type:
-            identifier: VARCHAR
+            data_type_identifier: VARCHAR
             bracketed:
               start_bracket: (
               expression:
@@ -132,12 +132,12 @@ file:
         - column_definition:
             identifier: column_a
             data_type:
-              identifier: INT
+              data_type_identifier: INT
         - comma: ','
         - column_definition:
             identifier: column_b
             data_type:
-              identifier: INT
+              data_type_identifier: INT
         - end_bracket: )
       - statement_terminator: ;
 - go_statement:
@@ -255,7 +255,7 @@ file:
         - dot: .
         - identifier: TransactionHistoryArchive
       - keyword: ADD
-      - table_constraint_segment:
+      - table_constraint:
         - keyword: CONSTRAINT
         - object_reference:
             identifier: PK_TransactionHistoryArchive_TransactionID
@@ -284,11 +284,74 @@ file:
       - column_definition:
           identifier: rec_number
           data_type:
-            identifier: VARCHAR
+            data_type_identifier: VARCHAR
             bracketed:
               start_bracket: (
               expression:
                 literal: '36'
               end_bracket: )
+- go_statement:
+    keyword: GO
+- batch:
+  - statement:
+      alter_table_statement:
+      - keyword: ALTER
+      - keyword: TABLE
+      - table_reference:
+        - identifier: Production
+        - dot: .
+        - identifier: TransactionHistoryArchive
+      - keyword: DROP
+      - keyword: CONSTRAINT
+      - object_reference:
+          identifier: PK_TransactionHistoryArchive_TransactionID
+  - statement:
+      alter_table_statement:
+      - keyword: ALTER
+      - keyword: TABLE
+      - table_reference:
+        - identifier: '[Production]'
+        - dot: .
+        - identifier: '[ProductCostHistory]'
+      - keyword: WITH
+      - keyword: CHECK
+      - keyword: ADD
+      - table_constraint:
+        - keyword: CONSTRAINT
+        - object_reference:
+            identifier: '[FK_ProductCostHistory_Product_ProductID]'
+        - keyword: FOREIGN
+        - keyword: KEY
+        - bracketed:
+            start_bracket: (
+            column_reference:
+              identifier: '[ProductID]'
+            end_bracket: )
+        - references_constraint_grammar:
+            keyword: REFERENCES
+            table_reference:
+            - identifier: '[Production]'
+            - dot: .
+            - identifier: '[Product]'
+            bracketed:
+              start_bracket: (
+              column_reference:
+                identifier: '[ProductID]'
+              end_bracket: )
+- go_statement:
+    keyword: GO
+- batch:
+    statement:
+      alter_table_statement:
+      - keyword: ALTER
+      - keyword: TABLE
+      - table_reference:
+        - identifier: '[Production]'
+        - dot: .
+        - identifier: '[ProductCostHistory]'
+      - keyword: CHECK
+      - keyword: CONSTRAINT
+      - object_reference:
+          identifier: '[FK_ProductCostHistory_Product_ProductID]'
 - go_statement:
     keyword: GO

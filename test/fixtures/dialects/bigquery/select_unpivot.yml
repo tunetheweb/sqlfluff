@@ -3,7 +3,7 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: f43c57b981290560b354c3394492a10b3a4f30ac1b076f21ea8fe9c533a3925e
+_hash: a91da916103c91a2f99e7a739346216c8ba6cf8b602ed81e9c54a0c64c3116c1
 file:
 - statement:
     with_compound_statement:
@@ -229,7 +229,7 @@ file:
                 - end_bracket: )
               - alias_expression:
                   keyword: AS
-                  identifier: "'semester_1'"
+                  literal: "'semester_1'"
               - comma: ','
               - bracketed:
                 - start_bracket: (
@@ -239,7 +239,131 @@ file:
                 - end_bracket: )
               - alias_expression:
                   keyword: AS
-                  identifier: "'semester_2'"
+                  literal: "'semester_2'"
+              - end_bracket: )
+            - end_bracket: )
+- statement_terminator: ;
+- statement:
+    select_statement:
+      select_clause:
+        keyword: SELECT
+        select_clause_element:
+          column_reference:
+            identifier: a
+          alias_expression:
+            keyword: AS
+            identifier: "'barry'"
+      from_clause:
+        keyword: FROM
+        from_expression:
+          from_expression_element:
+            table_expression:
+              table_reference:
+                identifier: model
+          from_unpivot_expression:
+            keyword: UNPIVOT
+            bracketed:
+            - start_bracket: (
+            - bracketed:
+              - start_bracket: (
+              - identifier: A
+              - comma: ','
+              - identifier: B
+              - end_bracket: )
+            - keyword: FOR
+            - identifier: year
+            - keyword: IN
+            - bracketed:
+              - start_bracket: (
+              - bracketed:
+                - start_bracket: (
+                - identifier: C
+                - comma: ','
+                - identifier: D
+                - end_bracket: )
+              - alias_expression:
+                  keyword: AS
+                  literal: '"year_2011"'
+              - comma: ','
+              - bracketed:
+                - start_bracket: (
+                - identifier: E
+                - comma: ','
+                - identifier: F
+                - end_bracket: )
+              - alias_expression:
+                  keyword: AS
+                  literal: '"year_2012"'
+              - end_bracket: )
+            - end_bracket: )
+- statement_terminator: ;
+- statement:
+    select_statement:
+      select_clause:
+        keyword: SELECT
+        select_clause_element:
+          wildcard_expression:
+            wildcard_identifier:
+              star: '*'
+      from_clause:
+        keyword: FROM
+        from_expression:
+          from_expression_element:
+            table_expression:
+              table_reference:
+                identifier: foo
+          from_unpivot_expression:
+            keyword: UNPIVOT
+            bracketed:
+            - start_bracket: (
+            - bracketed:
+              - start_bracket: (
+              - identifier: bar2
+              - comma: ','
+              - identifier: bar3
+              - comma: ','
+              - identifier: bar4
+              - end_bracket: )
+            - keyword: FOR
+            - identifier: year
+            - keyword: IN
+            - bracketed:
+              - start_bracket: (
+              - bracketed:
+                - start_bracket: (
+                - identifier: foo1
+                - comma: ','
+                - identifier: foo2
+                - comma: ','
+                - identifier: foo3
+                - end_bracket: )
+              - alias_expression:
+                  keyword: AS
+                  literal: '1'
+              - comma: ','
+              - bracketed:
+                - start_bracket: (
+                - identifier: foo4
+                - comma: ','
+                - identifier: foo5
+                - comma: ','
+                - identifier: foo6
+                - end_bracket: )
+              - alias_expression:
+                  keyword: AS
+                  literal: '2'
+              - comma: ','
+              - bracketed:
+                - start_bracket: (
+                - identifier: foo7
+                - comma: ','
+                - identifier: foo8
+                - comma: ','
+                - identifier: foo9
+                - end_bracket: )
+              - alias_expression:
+                  keyword: AS
+                  literal: '3'
               - end_bracket: )
             - end_bracket: )
 - statement_terminator: ;

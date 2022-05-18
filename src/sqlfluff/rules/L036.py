@@ -5,8 +5,9 @@ from typing import List, NamedTuple, Optional
 from sqlfluff.core.parser import WhitespaceSegment
 
 from sqlfluff.core.parser import BaseSegment, NewlineSegment
+from sqlfluff.core.parser.segments.base import IdentitySet
 from sqlfluff.core.rules.base import BaseRule, LintFix, LintResult, RuleContext
-from sqlfluff.core.rules.doc_decorators import document_fix_compatible
+from sqlfluff.core.rules.doc_decorators import document_fix_compatible, document_groups
 from sqlfluff.core.rules.functional import Segments
 import sqlfluff.core.rules.functional.segment_predicates as sp
 
@@ -18,11 +19,13 @@ class SelectTargetsInfo(NamedTuple):
     first_new_line_idx: int
     first_select_target_idx: int
     first_whitespace_idx: int
+    comment_after_select_idx: int
     select_targets: List[BaseSegment]
     from_segment: Optional[BaseSegment]
     pre_from_whitespace: List[BaseSegment]
 
 
+@document_groups
 @document_fix_compatible
 class Rule_L036(BaseRule):
     """Select targets should be on a new line unless there is only one select target.
@@ -68,14 +71,15 @@ class Rule_L036(BaseRule):
 
     """
 
+    groups = ("all",)
+
     def _eval(self, context: RuleContext):
         if context.segment.is_type("select_clause"):
             select_targets_info = self._get_indexes(context)
             if len(select_targets_info.select_targets) == 1:
                 return self._eval_single_select_target_element(
                     select_targets_info,
-                    context.functional.segment,
-                    context.parent_stack,
+                    context,
                 )
             elif len(select_targets_info.select_targets) > 1:
                 return self._eval_multiple_select_target_elements(
@@ -88,9 +92,25 @@ class Rule_L036(BaseRule):
         select_targets = children.select(sp.is_type("select_clause_element"))
         first_select_target_idx = children.find(select_targets.get())
         selects = children.select(sp.is_keyword("select"))
-        select_idx = children.find(selects.get())
+        select_idx = children.find(selects.get()) if selects else -1
         newlines = children.select(sp.is_type("newline"))
-        first_new_line_idx = children.find(newlines.get())
+        first_new_line_idx = children.find(newlines.get()) if newlines else -1
+        comment_after_select_idx = -1
+        if newlines:
+            comment_after_select = children.select(
+                sp.is_type("comment"),
+                start_seg=selects.get(),
+                stop_seg=newlines.get(),
+                loop_while=sp.or_(
+                    sp.is_type("comment"), sp.is_type("whitespace"), sp.is_meta()
+                ),
+            )
+            if comment_after_select:
+                comment_after_select_idx = (
+                    children.find(comment_after_select.get())
+                    if comment_after_select
+                    else -1
+                )
         first_whitespace_idx = -1
         if first_new_line_idx != -1:
             # TRICKY: Ignore whitespace prior to the first newline, e.g. if
@@ -111,6 +131,7 @@ class Rule_L036(BaseRule):
             first_new_line_idx,
             first_select_target_idx,
             first_whitespace_idx,
+            comment_after_select_idx,
             select_targets,
             from_segment,
             list(pre_from_whitespace),
@@ -170,8 +191,10 @@ class Rule_L036(BaseRule):
             return LintResult(anchor=segment, fixes=fixes)
 
     def _eval_single_select_target_element(
-        self, select_targets_info, select_clause: Segments, parent_stack
+        self, select_targets_info, context: RuleContext
     ):
+        select_clause = context.functional.segment
+        parent_stack = context.parent_stack
         wildcards = select_clause.children(
             sp.is_type("select_clause_element")
         ).children(sp.is_type("wildcard_expression"))
@@ -190,10 +213,6 @@ class Rule_L036(BaseRule):
             modifier = select_children.first(sp.is_type("select_clause_modifier"))
 
             # Prepare the select clause which will be inserted
-            # In most (but not all) case we'll want to replace the newline with
-            # the statement and a newline, but in some cases however (see #1424)
-            # we don't need the final newline.
-            copy_with_newline = True
             insert_buff = [
                 WhitespaceSegment(),
                 select_children[select_targets_info.first_select_target_idx],
@@ -254,6 +273,55 @@ class Rule_L036(BaseRule):
                 select_clause_idx = select_stmt.segments.index(select_clause.get())
                 after_select_clause_idx = select_clause_idx + 1
                 if len(select_stmt.segments) > after_select_clause_idx:
+
+                    def _fixes_for_move_after_select_clause(
+                        stop_seg: BaseSegment,
+                        delete_segments: Optional[Segments] = None,
+                        add_newline: bool = True,
+                    ) -> List[LintFix]:
+                        """Cleans up by moving leftover select_clause segments.
+
+                        Context: Some of the other fixes we make in
+                        _eval_single_select_target_element() leave leftover
+                        child segments that need to be moved to become
+                        *siblings* of the select_clause.
+                        """
+                        start_seg = (
+                            modifier[0]
+                            if modifier
+                            else select_children[select_targets_info.first_new_line_idx]
+                        )
+                        move_after_select_clause = select_children.select(
+                            start_seg=start_seg,
+                            stop_seg=stop_seg,
+                        )
+                        # :TRICKY: Below, we have a couple places where we
+                        # filter to guard against deleting the same segment
+                        # multiple times -- this is illegal.
+                        # :TRICKY: Use IdentitySet rather than set() since
+                        # different segments may compare as equal.
+                        all_deletes = IdentitySet(
+                            fix.anchor for fix in fixes if fix.edit_type == "delete"
+                        )
+                        fixes_ = []
+                        for seg in delete_segments or []:
+                            if seg not in all_deletes:
+                                fixes.append(LintFix.delete(seg))
+                                all_deletes.add(seg)
+                        fixes_ += [
+                            LintFix.delete(seg)
+                            for seg in move_after_select_clause
+                            if seg not in all_deletes
+                        ]
+                        fixes_.append(
+                            LintFix.create_after(
+                                select_clause[0],
+                                ([NewlineSegment()] if add_newline else [])
+                                + list(move_after_select_clause),
+                            )
+                        )
+                        return fixes_
+
                     if select_stmt.segments[after_select_clause_idx].is_type("newline"):
                         # Since we're deleting the newline, we should also delete all
                         # whitespace before it or it will add random whitespace to
@@ -264,44 +332,46 @@ class Rule_L036(BaseRule):
                             loop_while=sp.is_type("whitespace"),
                             start_seg=select_children[start_idx],
                         )
-                        fixes += [LintFix.delete(seg) for seg in to_delete]
+                        if to_delete:
+                            # The select_clause is immediately followed by a
+                            # newline. Delete the newline in order to avoid leaving
+                            # behind an empty line after fix, *unless* we stopped
+                            # due to something other than a newline.
+                            delete_last_newline = select_children[
+                                start_idx - len(to_delete) - 1
+                            ].is_type("newline")
 
-                        # The select_clause is immediately followed by a
-                        # newline. Delete the newline in order to avoid leaving
-                        # behind an empty line after fix, *unless* we stopped
-                        # due to something other than a newline.
-                        delete_last_newline = select_children[
-                            start_idx - len(to_delete) - 1
-                        ].is_type("newline")
-
-                        # Delete the newline if we decided to.
-                        if delete_last_newline:
-                            fixes.append(
-                                LintFix.delete(
-                                    select_stmt.segments[after_select_clause_idx],
+                            # Delete the newline if we decided to.
+                            if delete_last_newline:
+                                fixes.append(
+                                    LintFix.delete(
+                                        select_stmt.segments[after_select_clause_idx],
+                                    )
                                 )
-                            )
 
+                            fixes += _fixes_for_move_after_select_clause(
+                                to_delete[-1], to_delete
+                            )
                     elif select_stmt.segments[after_select_clause_idx].is_type(
                         "whitespace"
                     ):
                         # The select_clause has stuff after (most likely a comment)
                         # Delete the whitespace immediately after the select clause
                         # so the other stuff aligns nicely based on where the select
-                        # clause started
+                        # clause started.
                         fixes += [
                             LintFix.delete(
                                 select_stmt.segments[after_select_clause_idx],
                             ),
                         ]
+                        fixes += _fixes_for_move_after_select_clause(
+                            select_children[
+                                select_targets_info.first_select_target_idx
+                            ],
+                        )
                     elif select_stmt.segments[after_select_clause_idx].is_type(
                         "dedent"
                     ):
-                        # The end of the select statement, so this is the one
-                        # case we don't want the newline added to end of
-                        # select_clause (see #1424)
-                        copy_with_newline = False
-
                         # Again let's strip back the whitespace, but simpler
                         # as don't need to worry about new line so just break
                         # if see non-whitespace
@@ -309,26 +379,39 @@ class Rule_L036(BaseRule):
                             loop_while=sp.is_type("whitespace"),
                             start_seg=select_children[select_clause_idx - 1],
                         )
-                        fixes += [LintFix.delete(seg) for seg in to_delete]
+                        if to_delete:
+                            fixes += _fixes_for_move_after_select_clause(
+                                to_delete[-1],
+                                to_delete,
+                                # If we deleted a newline, create a newline.
+                                any(seg for seg in to_delete if seg.is_type("newline")),
+                            )
+                    else:
+                        fixes += _fixes_for_move_after_select_clause(
+                            select_children[
+                                select_targets_info.first_select_target_idx
+                            ],
+                        )
 
-                        # If we stopped due to something other than a newline,
-                        # we want to keep the final newline.
-                        copy_with_newline = not select_children[
-                            select_clause_idx - len(to_delete) - 2
-                        ].is_type("newline")
-
-            if copy_with_newline:
-                insert_buff = insert_buff + [NewlineSegment()]
-
-            fixes += [
-                # Insert the select_clause in place of the first newlin in the
-                # Select statement
-                LintFix.replace(
-                    select_children[select_targets_info.first_new_line_idx],
-                    insert_buff,
-                ),
-            ]
-
+            if select_targets_info.comment_after_select_idx == -1:
+                fixes += [
+                    # Insert the select_clause in place of the first newline in the
+                    # Select statement
+                    LintFix.replace(
+                        select_children[select_targets_info.first_new_line_idx],
+                        insert_buff,
+                    ),
+                ]
+            else:
+                # The SELECT is followed by a comment on the same line. In order
+                # to autofix this, we'd need to move the select target between
+                # SELECT and the comment and potentially delete the entire line
+                # where the select target was (if it is now empty). This is
+                # *fairly tricky and complex*, in part because the newline on
+                # the select target's line is several levels higher in the
+                # parser tree. Hence, we currently don't autofix this. Could be
+                # autofixed in the future if/when we have the time.
+                fixes = []
             return LintResult(
                 anchor=select_clause.get(),
                 fixes=fixes,

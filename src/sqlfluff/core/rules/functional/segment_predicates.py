@@ -97,11 +97,11 @@ def is_whitespace() -> Callable[[BaseSegment], bool]:
     return _
 
 
-def get_type() -> Callable[[BaseSegment], str]:
-    """Returns a function that gets segment type."""
+def is_templated() -> Callable[[BaseSegment], bool]:
+    """Returns a function that checks if segment is templated."""
 
-    def _(segment: BaseSegment) -> str:
-        return segment.get_type()
+    def _(segment: BaseSegment) -> bool:
+        return segment.is_templated
 
     return _
 
@@ -151,6 +151,10 @@ def raw_slices(
         raise ValueError(
             'raw_slices: "templated_file" parameter is required.'
         )  # pragma: no cover
+    if not segment.pos_marker:
+        raise ValueError(
+            'raw_slices: "segment" parameter must have pos_marker set.'
+        )  # pragma: no cover
     return RawFileSlices(
         *templated_file.raw_slices_spanning_source_slice(
             segment.pos_marker.source_slice
@@ -168,7 +172,10 @@ def templated_slices(
         raise ValueError(
             'templated_slices: "templated_file" parameter is required.'
         )  # pragma: no cover
-    templated_slices = []
+    if not segment.pos_marker:
+        raise ValueError(
+            'templated_slices: "segment" parameter must have pos_marker set.'
+        )  # pragma: no cover
     # :TRICKY: We don't use _find_slice_indices_of_templated_pos() here because
     # it treats TemplatedFileSlice.templated_slice.stop as inclusive, not
     # exclusive. Other parts of SQLFluff rely on this behavior, but we don't
@@ -179,9 +186,7 @@ def templated_slices(
     templated_slices = [
         slice_
         for slice_ in templated_file.sliced_file
-        if (
-            stop >= slice_.templated_slice.start and start < slice_.templated_slice.stop
-        )
+        if (stop > slice_.templated_slice.start and start < slice_.templated_slice.stop)
     ]
     return TemplatedFileSlices(*templated_slices, templated_file=templated_file)
 
@@ -189,6 +194,10 @@ def templated_slices(
 def raw_slice(segment: BaseSegment, raw_slice_: RawFileSlice) -> str:
     """Return the portion of a segment's source provided by raw_slice."""
     result = ""
+    if not segment.pos_marker:
+        raise ValueError(
+            'raw_slice: "segment" parameter must have pos_marker set.'
+        )  # pragma: no cover
     seg_start = segment.pos_marker.source_slice.start
     seg_stop = segment.pos_marker.source_slice.stop
     if seg_start != seg_stop:

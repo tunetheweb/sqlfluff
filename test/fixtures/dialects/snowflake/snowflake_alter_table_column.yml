@@ -3,7 +3,7 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: da05343c3524c758f1cefc015796188ef2dc202a28bed5b8817b4edb603525e5
+_hash: 9c6169b3930295c33640ddc54adb221bf9df5ec14b9f39e401e0de5e53045a6d
 file:
 - statement:
     alter_table_statement:
@@ -40,6 +40,25 @@ file:
           column_constraint_segment:
           - keyword: NOT
           - keyword: 'NULL'
+- statement_terminator: ;
+- statement:
+    alter_table_statement:
+    - keyword: ALTER
+    - keyword: TABLE
+    - table_reference:
+        identifier: my_table
+    - alter_table_table_column_action:
+      - keyword: ADD
+      - keyword: COLUMN
+      - column_reference:
+          identifier: column_1
+      - data_type:
+          data_type_identifier: varchar
+      - comma: ','
+      - column_reference:
+          identifier: column_2
+      - data_type:
+          data_type_identifier: integer
 - statement_terminator: ;
 - statement:
     alter_table_statement:
@@ -143,8 +162,8 @@ file:
           data_type_identifier: INTEGER
       - keyword: MASKING
       - keyword: POLICY
-      - object_reference:
-          identifier: my_policy
+      - function_name:
+          function_name_identifier: my_policy
 - statement_terminator: ;
 - statement:
     alter_table_statement:
@@ -162,8 +181,80 @@ file:
       - keyword: WITH
       - keyword: MASKING
       - keyword: POLICY
-      - object_reference:
-          identifier: my_policy
+      - function_name:
+          function_name_identifier: my_policy
+- statement_terminator: ;
+- statement:
+    alter_table_statement:
+    - keyword: ALTER
+    - keyword: TABLE
+    - table_reference:
+        identifier: my_table
+    - alter_table_table_column_action:
+      - keyword: ADD
+      - keyword: COLUMN
+      - column_reference:
+          identifier: my_column
+      - data_type:
+          data_type_identifier: INTEGER
+      - keyword: WITH
+      - keyword: MASKING
+      - keyword: POLICY
+      - function_name:
+        - identifier: adatabase
+        - dot: .
+        - identifier: aschema
+        - dot: .
+        - function_name_identifier: apolicy
+- statement_terminator: ;
+- statement:
+    alter_table_statement:
+    - keyword: ALTER
+    - keyword: TABLE
+    - table_reference:
+        identifier: my_table
+    - alter_table_table_column_action:
+      - keyword: ADD
+      - keyword: COLUMN
+      - column_reference:
+          identifier: my_column
+      - data_type:
+          data_type_identifier: INTEGER
+      - keyword: WITH
+      - keyword: MASKING
+      - keyword: POLICY
+      - function_name:
+          function_name_identifier: my_policy
+      - keyword: USING
+      - bracketed:
+          start_bracket: (
+          column_reference:
+            identifier: my_column
+          comma: ','
+          expression:
+            column_reference:
+              identifier: my_column
+            comparison_operator:
+              raw_comparison_operator: '>'
+            literal: '10'
+          end_bracket: )
+- statement_terminator: ;
+- statement:
+    alter_table_statement:
+    - keyword: ALTER
+    - keyword: TABLE
+    - table_reference:
+        identifier: reporting_tbl
+    - alter_table_table_column_action:
+      - keyword: ADD
+      - keyword: COLUMN
+      - column_reference:
+          identifier: reporting_group
+      - data_type:
+          data_type_identifier: VARCHAR
+      - comment_clause:
+          keyword: COMMENT
+          literal: "'internal reporting group defined by DE team'"
 - statement_terminator: ;
 - statement:
     alter_table_statement:
@@ -202,11 +293,12 @@ file:
     - table_reference:
         identifier: t1
     - alter_table_table_column_action:
-      - keyword: alter
-      - column_reference:
+        keyword: alter
+        column_reference:
           identifier: c5
-      - keyword: comment
-      - literal: "'50 character column'"
+        comment_clause:
+          keyword: comment
+          literal: "'50 character column'"
 - statement_terminator: ;
 - statement:
     alter_table_statement:
@@ -272,7 +364,31 @@ file:
       - keyword: SET
       - keyword: MASKING
       - keyword: POLICY
-      - function_name_identifier: example_MASKING_POLICY
+      - function_name:
+          function_name_identifier: example_MASKING_POLICY
+- statement_terminator: ;
+- statement:
+    alter_table_statement:
+    - keyword: ALTER
+    - keyword: TABLE
+    - table_reference:
+      - identifier: aschema
+      - dot: .
+      - identifier: atable
+    - alter_table_table_column_action:
+      - keyword: MODIFY
+      - keyword: COLUMN
+      - column_reference:
+          identifier: acolumn
+      - keyword: SET
+      - keyword: MASKING
+      - keyword: POLICY
+      - function_name:
+        - identifier: adatabase
+        - dot: .
+        - identifier: aschema
+        - dot: .
+        - function_name_identifier: apolicy
 - statement_terminator: ;
 - statement:
     alter_table_statement:
@@ -288,7 +404,8 @@ file:
       - keyword: set
       - keyword: masking
       - keyword: policy
-      - function_name_identifier: mask_empl_id
+      - function_name:
+          function_name_identifier: mask_empl_id
 - statement_terminator: ;
 - statement:
     alter_table_statement:
@@ -304,7 +421,38 @@ file:
       - keyword: set
       - keyword: masking
       - keyword: policy
-      - function_name_identifier: mask_empl_id
+      - function_name:
+          function_name_identifier: mask_empl_id
+      - keyword: using
+      - bracketed:
+          start_bracket: (
+          column_reference:
+            identifier: empl_id
+          comma: ','
+          expression:
+            column_reference:
+              identifier: empl_id
+            comparison_operator:
+              raw_comparison_operator: '>'
+            literal: '10'
+          end_bracket: )
+- statement_terminator: ;
+- statement:
+    alter_table_statement:
+    - keyword: alter
+    - keyword: table
+    - table_reference:
+        identifier: empl_info
+    - alter_table_table_column_action:
+      - keyword: modify
+      - keyword: column
+      - column_reference:
+          identifier: empl_id
+      - keyword: set
+      - keyword: masking
+      - keyword: policy
+      - function_name:
+          function_name_identifier: mask_empl_id
       - comma: ','
       - keyword: column
       - column_reference:
@@ -312,7 +460,8 @@ file:
       - keyword: set
       - keyword: masking
       - keyword: policy
-      - function_name_identifier: mask_empl_dob
+      - function_name:
+          function_name_identifier: mask_empl_dob
 - statement_terminator: ;
 - statement:
     alter_table_statement:

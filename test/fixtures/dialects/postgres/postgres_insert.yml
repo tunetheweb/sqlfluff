@@ -3,8 +3,143 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: c840d33ae97d17da0e547f7786feda1663430529850f5bb0e0bc62617bf02e9c
+_hash: 35976c6f45c6ee2a737cdfbfa6abed174e60583b3ac944771f04d773c5ed64bc
 file:
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
+        identifier: foo
+    - bracketed:
+        start_bracket: (
+        column_reference:
+          identifier: bar
+        end_bracket: )
+    - values_clause:
+        keyword: VALUES
+        bracketed:
+          start_bracket: (
+          expression:
+            bare_function: current_timestamp
+          end_bracket: )
+- statement_terminator: ;
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
+        identifier: foo
+    - bracketed:
+      - start_bracket: (
+      - column_reference:
+          identifier: bar
+      - comma: ','
+      - column_reference:
+          identifier: baz
+      - end_bracket: )
+    - values_clause:
+      - keyword: VALUES
+      - bracketed:
+        - start_bracket: (
+        - expression:
+            literal: '1'
+        - comma: ','
+        - expression:
+            literal: '2'
+        - end_bracket: )
+      - comma: ','
+      - bracketed:
+        - start_bracket: (
+        - expression:
+            literal: '3'
+        - comma: ','
+        - expression:
+            literal: '4'
+        - end_bracket: )
+- statement_terminator: ;
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
+        identifier: foo
+    - bracketed:
+      - start_bracket: (
+      - column_reference:
+          identifier: bar
+      - comma: ','
+      - column_reference:
+          identifier: baz
+      - end_bracket: )
+    - values_clause:
+      - keyword: VALUES
+      - bracketed:
+        - start_bracket: (
+        - expression:
+          - literal: '1'
+          - binary_operator: +
+          - literal: '1'
+        - comma: ','
+        - expression:
+            literal: '2'
+        - end_bracket: )
+      - comma: ','
+      - bracketed:
+        - start_bracket: (
+        - expression:
+            literal: '3'
+        - comma: ','
+        - expression:
+            literal: '4'
+        - end_bracket: )
+- statement_terminator: ;
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
+        identifier: foo
+    - bracketed:
+        start_bracket: (
+        column_reference:
+          identifier: bar
+        end_bracket: )
+    - values_clause:
+        keyword: VALUES
+        bracketed:
+          start_bracket: (
+          keyword: DEFAULT
+          end_bracket: )
+- statement_terminator: ;
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
+        identifier: distributors
+    - alias_expression:
+        keyword: AS
+        identifier: d
+    - bracketed:
+      - start_bracket: (
+      - column_reference:
+          identifier: did
+      - comma: ','
+      - column_reference:
+          identifier: dname
+      - end_bracket: )
+    - values_clause:
+        keyword: VALUES
+        bracketed:
+        - start_bracket: (
+        - expression:
+            literal: '8'
+        - comma: ','
+        - expression:
+            literal: "'Anvil Distribution'"
+        - end_bracket: )
+- statement_terminator: ;
 - statement:
     insert_statement:
     - keyword: INSERT
@@ -38,6 +173,77 @@ file:
     - keyword: INSERT
     - keyword: INTO
     - table_reference:
+        identifier: test
+    - bracketed:
+      - start_bracket: (
+      - column_reference:
+          identifier: id
+      - comma: ','
+      - column_reference:
+          identifier: col1
+      - end_bracket: )
+    - keyword: OVERRIDING
+    - keyword: USER
+    - keyword: VALUE
+    - values_clause:
+        keyword: VALUES
+        bracketed:
+        - start_bracket: (
+        - expression:
+            literal: '1'
+        - comma: ','
+        - expression:
+            literal: "'val'"
+        - end_bracket: )
+- statement_terminator: ;
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
+        identifier: foo
+    - bracketed:
+        start_bracket: (
+        column_reference:
+          identifier: bar
+        end_bracket: )
+    - keyword: DEFAULT
+    - keyword: VALUES
+- statement_terminator: ;
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
+        identifier: films
+    - select_statement:
+        select_clause:
+          keyword: SELECT
+          select_clause_element:
+            wildcard_expression:
+              wildcard_identifier:
+                star: '*'
+        from_clause:
+          keyword: FROM
+          from_expression:
+            from_expression_element:
+              table_expression:
+                table_reference:
+                  identifier: tmp_films
+        where_clause:
+          keyword: WHERE
+          expression:
+            column_reference:
+              identifier: date_prod
+            comparison_operator:
+              raw_comparison_operator: <
+            literal: "'2004-05-07'"
+- statement_terminator: ;
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
         identifier: foo
     - bracketed:
         start_bracket: (
@@ -51,32 +257,426 @@ file:
           expression:
             bare_function: current_timestamp
           end_bracket: )
+    - keyword: RETURNING
+    - star: '*'
 - statement_terminator: ;
 - statement:
     insert_statement:
     - keyword: INSERT
     - keyword: INTO
     - table_reference:
-        identifier: distributors
+        identifier: foo
+    - bracketed:
+        start_bracket: (
+        column_reference:
+          identifier: bar
+        end_bracket: )
+    - values_clause:
+        keyword: VALUES
+        bracketed:
+          start_bracket: (
+          expression:
+            bare_function: current_timestamp
+          end_bracket: )
+    - keyword: RETURNING
+    - expression:
+        column_reference:
+          identifier: bar
+- statement_terminator: ;
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
+        identifier: foo
+    - bracketed:
+        start_bracket: (
+        column_reference:
+          identifier: bar
+        end_bracket: )
+    - values_clause:
+        keyword: VALUES
+        bracketed:
+          start_bracket: (
+          expression:
+            bare_function: current_timestamp
+          end_bracket: )
+    - keyword: RETURNING
+    - expression:
+        column_reference:
+          identifier: bar
     - alias_expression:
         keyword: AS
-        identifier: d
+        identifier: some_alias
+- statement_terminator: ;
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
+        identifier: foo
     - bracketed:
       - start_bracket: (
       - column_reference:
-          identifier: did
+          identifier: bar
       - comma: ','
       - column_reference:
-          identifier: dname
+          identifier: baz
       - end_bracket: )
     - values_clause:
         keyword: VALUES
         bracketed:
         - start_bracket: (
         - expression:
-            literal: '8'
+            literal: '1'
         - comma: ','
         - expression:
-            literal: "'Anvil Distribution'"
+            literal: '2'
         - end_bracket: )
+    - keyword: RETURNING
+    - expression:
+        column_reference:
+          identifier: bar
+    - comma: ','
+    - expression:
+        column_reference:
+          identifier: baz
+- statement_terminator: ;
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
+        identifier: foo
+    - bracketed:
+      - start_bracket: (
+      - column_reference:
+          identifier: bar
+      - comma: ','
+      - column_reference:
+          identifier: baz
+      - end_bracket: )
+    - values_clause:
+        keyword: VALUES
+        bracketed:
+        - start_bracket: (
+        - expression:
+            literal: '1'
+        - comma: ','
+        - expression:
+            literal: '2'
+        - end_bracket: )
+    - keyword: RETURNING
+    - expression:
+        column_reference:
+          identifier: bar
+    - alias_expression:
+        keyword: AS
+        identifier: alias1
+    - comma: ','
+    - expression:
+        column_reference:
+          identifier: baz
+    - alias_expression:
+        keyword: AS
+        identifier: alias2
+- statement_terminator: ;
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
+        identifier: foo
+    - bracketed:
+      - start_bracket: (
+      - column_reference:
+          identifier: bar
+      - comma: ','
+      - column_reference:
+          identifier: baz
+      - end_bracket: )
+    - values_clause:
+        keyword: VALUES
+        bracketed:
+        - start_bracket: (
+        - expression:
+            literal: '1'
+        - comma: ','
+        - expression:
+            literal: "'var'"
+        - end_bracket: )
+    - keyword: 'ON'
+    - keyword: CONFLICT
+    - conflict_target:
+        bracketed:
+          start_bracket: (
+          column_reference:
+            identifier: bar
+          end_bracket: )
+    - conflict_action:
+      - keyword: DO
+      - keyword: UPDATE
+      - keyword: SET
+      - column_reference:
+          identifier: baz
+      - comparison_operator:
+          raw_comparison_operator: '='
+      - expression:
+          column_reference:
+          - identifier: EXCLUDED
+          - dot: .
+          - identifier: baz
+- statement_terminator: ;
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
+        identifier: foo
+    - bracketed:
+      - start_bracket: (
+      - column_reference:
+          identifier: bar
+      - comma: ','
+      - column_reference:
+          identifier: baz
+      - end_bracket: )
+    - values_clause:
+        keyword: VALUES
+        bracketed:
+        - start_bracket: (
+        - expression:
+            literal: '1'
+        - comma: ','
+        - expression:
+            literal: "'var'"
+        - end_bracket: )
+    - keyword: 'ON'
+    - keyword: CONFLICT
+    - conflict_target:
+        bracketed:
+          start_bracket: (
+          column_reference:
+            identifier: bar
+          end_bracket: )
+    - conflict_action:
+      - keyword: DO
+      - keyword: NOTHING
+- statement_terminator: ;
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
+        identifier: foo
+    - alias_expression:
+        keyword: AS
+        identifier: f
+    - bracketed:
+      - start_bracket: (
+      - column_reference:
+          identifier: bar
+      - comma: ','
+      - column_reference:
+          identifier: baz
+      - end_bracket: )
+    - values_clause:
+        keyword: VALUES
+        bracketed:
+        - start_bracket: (
+        - expression:
+            literal: '1'
+        - comma: ','
+        - expression:
+            literal: "'var'"
+        - end_bracket: )
+    - keyword: 'ON'
+    - keyword: CONFLICT
+    - conflict_target:
+        bracketed:
+          start_bracket: (
+          column_reference:
+            identifier: bar
+          end_bracket: )
+    - conflict_action:
+      - keyword: DO
+      - keyword: UPDATE
+      - keyword: SET
+      - column_reference:
+          identifier: baz
+      - comparison_operator:
+          raw_comparison_operator: '='
+      - expression:
+        - column_reference:
+          - identifier: EXCLUDED
+          - dot: .
+          - identifier: baz
+        - binary_operator:
+          - pipe: '|'
+          - pipe: '|'
+        - literal: "' (formerly '"
+        - binary_operator:
+          - pipe: '|'
+          - pipe: '|'
+        - column_reference:
+          - identifier: f
+          - dot: .
+          - identifier: baz
+        - binary_operator:
+          - pipe: '|'
+          - pipe: '|'
+        - literal: "')'"
+      - keyword: WHERE
+      - expression:
+          column_reference:
+          - identifier: f
+          - dot: .
+          - identifier: zipcode
+          comparison_operator:
+          - raw_comparison_operator: '!'
+          - raw_comparison_operator: '='
+          literal: "'21201'"
+- statement_terminator: ;
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
+        identifier: foo
+    - bracketed:
+      - start_bracket: (
+      - column_reference:
+          identifier: bar
+      - comma: ','
+      - column_reference:
+          identifier: baz
+      - end_bracket: )
+    - values_clause:
+        keyword: VALUES
+        bracketed:
+        - start_bracket: (
+        - expression:
+            literal: '1'
+        - comma: ','
+        - expression:
+            literal: "'var'"
+        - end_bracket: )
+    - keyword: 'ON'
+    - keyword: CONFLICT
+    - conflict_target:
+      - keyword: 'ON'
+      - keyword: CONSTRAINT
+      - parameter: foo_pkey
+    - conflict_action:
+      - keyword: DO
+      - keyword: NOTHING
+- statement_terminator: ;
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
+        identifier: foo
+    - bracketed:
+      - start_bracket: (
+      - column_reference:
+          identifier: bar
+      - comma: ','
+      - column_reference:
+          identifier: baz
+      - end_bracket: )
+    - values_clause:
+        keyword: VALUES
+        bracketed:
+        - start_bracket: (
+        - expression:
+            literal: '1'
+        - comma: ','
+        - expression:
+            literal: "'var'"
+        - end_bracket: )
+    - keyword: 'ON'
+    - keyword: CONFLICT
+    - conflict_target:
+        bracketed:
+          start_bracket: (
+          column_reference:
+            identifier: bar
+          end_bracket: )
+        keyword: WHERE
+        expression:
+          column_reference:
+            identifier: is_active
+    - conflict_action:
+      - keyword: DO
+      - keyword: NOTHING
+- statement_terminator: ;
+- statement:
+    insert_statement:
+    - keyword: INSERT
+    - keyword: INTO
+    - table_reference:
+        identifier: foo
+    - bracketed:
+      - start_bracket: (
+      - column_reference:
+          identifier: bar
+      - comma: ','
+      - column_reference:
+          identifier: baz
+      - end_bracket: )
+    - values_clause:
+        keyword: VALUES
+        bracketed:
+        - start_bracket: (
+        - expression:
+            literal: '1'
+        - comma: ','
+        - expression:
+            literal: "'var'"
+        - end_bracket: )
+    - keyword: 'ON'
+    - keyword: CONFLICT
+    - conflict_target:
+        bracketed:
+          start_bracket: (
+          column_reference:
+            identifier: bar
+          end_bracket: )
+    - conflict_action:
+      - keyword: DO
+      - keyword: UPDATE
+      - keyword: SET
+      - bracketed:
+          start_bracket: (
+          column_reference:
+            identifier: baz
+          end_bracket: )
+      - comparison_operator:
+          raw_comparison_operator: '='
+      - bracketed:
+          start_bracket: (
+          expression:
+            select_statement:
+              select_clause:
+                keyword: SELECT
+                select_clause_element:
+                  column_reference:
+                    identifier: baz
+              from_clause:
+                keyword: FROM
+                from_expression:
+                  from_expression_element:
+                    table_expression:
+                      table_reference:
+                        identifier: foobar
+              where_clause:
+                keyword: WHERE
+                expression:
+                  column_reference:
+                    identifier: bar
+                  comparison_operator:
+                    raw_comparison_operator: '='
+                  literal: '1'
+          end_bracket: )
 - statement_terminator: ;

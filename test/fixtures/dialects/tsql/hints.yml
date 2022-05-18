@@ -3,7 +3,7 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: c6976fb5117776ea0122563b8d98741bb6c062204c4d4d9707672ac626c7ec33
+_hash: 5bcf24968b7d9978c558f165b2a84e3ea46a42f03558600cdad2930890852042
 file:
 - batch:
     statement:
@@ -81,7 +81,7 @@ file:
     - procedure_parameter_list:
       - parameter: '@city_name'
       - data_type:
-          identifier: NVARCHAR
+          data_type_identifier: NVARCHAR
           bracketed:
             start_bracket: (
             expression:
@@ -90,7 +90,7 @@ file:
       - comma: ','
       - parameter: '@postal_code'
       - data_type:
-          identifier: NVARCHAR
+          data_type_identifier: NVARCHAR
           bracketed:
             start_bracket: (
             expression:
@@ -635,7 +635,7 @@ file:
         - identifier: Production
         - dot: .
         - identifier: Product
-        base:
+        post_table_expression:
           keyword: WITH
           bracketed:
             start_bracket: (
@@ -647,8 +647,9 @@ file:
           set_clause:
             column_reference:
               identifier: ListPrice
-            comparison_operator:
-              raw_comparison_operator: '='
+            assignment_operator:
+              comparison_operator:
+                raw_comparison_operator: '='
             expression:
               column_reference:
                 identifier: ListPrice
@@ -697,7 +698,7 @@ file:
                 alias_expression:
                   keyword: AS
                   identifier: d
-                base:
+                post_table_expression:
                   keyword: WITH
                   bracketed:
                     start_bracket: (
@@ -796,7 +797,7 @@ file:
                 alias_expression:
                   keyword: AS
                   identifier: d
-                base:
+                post_table_expression:
                   keyword: WITH
                   bracketed:
                     start_bracket: (
@@ -904,7 +905,7 @@ file:
                 alias_expression:
                   keyword: AS
                   identifier: d
-                base:
+                post_table_expression:
                   keyword: WITH
                   bracketed:
                     start_bracket: (
@@ -974,7 +975,7 @@ file:
                 - identifier: dbo
                 - dot: .
                 - identifier: tableX
-              base:
+              post_table_expression:
                 keyword: WITH
                 bracketed:
                   start_bracket: (

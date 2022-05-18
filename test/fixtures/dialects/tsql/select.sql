@@ -88,8 +88,17 @@ SELECT
 
 	ROW_NUMBER() OVER (PARTITION BY (SELECT mediaty FROM dbo.MediaTypes ms WHERE ms.MediaTypeID = f.mediatypeid) ORDER BY AdjustedPriorityScore DESC) AS Subselect_Partition,
 
-	ROW_NUMBER() OVER (PARTITION BY COALESCE(NPI1, NPI2) ORDER BY COALESCE(SystemEffectiveDTS1, SystemEffectiveDTS2) DESC) AS Coalesce_Partition
+	ROW_NUMBER() OVER (PARTITION BY COALESCE(NPI1, NPI2) ORDER BY COALESCE(SystemEffectiveDTS1, SystemEffectiveDTS2) DESC) AS Coalesce_Partition,
+
+	ROW_NUMBER() OVER (PARTITION BY (DayInMonth), (DaySuffix) ORDER BY Month ASC),
+
+	[preceding]	= count(*) over(order by object_id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW ),
+	[central]	= count(*) over(order by object_id ROWS BETWEEN 2 PRECEDING AND 2 FOLLOWING ),
+	[following]	= count(*) over(order by object_id ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING),
+
+    EqualsAlias = ColumnName,
+    OtherColumnName AS AsAlias
 
 
-FROM dbo . all_pop	
+FROM dbo . all_pop
 

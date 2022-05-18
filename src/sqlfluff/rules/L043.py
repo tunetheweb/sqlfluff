@@ -9,10 +9,11 @@ from sqlfluff.core.parser import (
 from sqlfluff.core.parser.segments.base import BaseSegment
 
 from sqlfluff.core.rules.base import BaseRule, LintFix, LintResult, RuleContext
-from sqlfluff.core.rules.doc_decorators import document_fix_compatible
+from sqlfluff.core.rules.doc_decorators import document_fix_compatible, document_groups
 from sqlfluff.core.rules.functional import Segments, sp
 
 
+@document_groups
 @document_fix_compatible
 class Rule_L043(BaseRule):
     """Unnecessary ``CASE`` statement.
@@ -75,6 +76,8 @@ class Rule_L043(BaseRule):
 
 
     """
+
+    groups = ("all",)
 
     @staticmethod
     def _coalesce_fix_list(
@@ -240,10 +243,7 @@ class Rule_L043(BaseRule):
                         description="Unnecessary CASE statement. "
                         "Use COALESCE function instead.",
                     )
-                elif (
-                    column_reference_segment.raw_segments_upper
-                    == then_expression.raw_segments_upper
-                ):
+                elif column_reference_segment.raw_upper == then_expression.raw_upper:
                     # Can just specify the column on it's own
                     # rather than using a COALESCE function.
                     # In this case no ELSE statement is equivalent to ELSE NULL.

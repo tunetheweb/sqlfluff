@@ -5,11 +5,13 @@ from sqlfluff.core.parser import NewlineSegment
 
 from sqlfluff.core.rules.base import BaseRule, LintFix, LintResult, RuleContext
 from sqlfluff.core.rules.doc_decorators import (
-    document_fix_compatible,
     document_configuration,
+    document_fix_compatible,
+    document_groups,
 )
 
 
+@document_groups
 @document_fix_compatible
 @document_configuration
 class Rule_L022(BaseRule):
@@ -41,6 +43,7 @@ class Rule_L022(BaseRule):
 
     """
 
+    groups = ("all", "core")
     config_keywords = ["comma_style"]
 
     def _eval(self, context: RuleContext) -> Optional[List[LintResult]]:
@@ -194,12 +197,12 @@ class Rule_L022(BaseRule):
                             offset = 1
                             while line_idx - offset in comment_lines:
                                 offset += 1
+                            # If the offset - 1 equals the line_idx then there aren't
+                            # really any comment-only lines (ref #2945).
+                            # Reset to line_idx
                             fix_point = forward_slice[
-                                line_starts[line_idx - (offset - 1)]
+                                line_starts[line_idx - (offset - 1) or line_idx]
                             ]
-                        # Note: There is an edge case where this isn't enough, if
-                        # comments are in strange places, but we'll catch them on
-                        # the next iteration.
                         num_newlines = 1
 
                     fixes = [

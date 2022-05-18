@@ -14,6 +14,22 @@ test_pass_1:
         END AS sound
     FROM mytable
 
+test_pass_2:
+  # Issue 3110. The nested CASE is part of a larger expression. Cannot flatten.
+  pass_str: |
+    SELECT CASE 'b'
+            WHEN 'a' THEN
+                TRUE
+            ELSE
+                '2022-01-01'::date > CURRENT_DATE + CASE 'b'
+                    WHEN 'b' THEN
+                        8
+                    WHEN 'c' THEN
+                        9
+                END
+                AND (c > 10)
+        END AS test
+
 test_fail_1:
   # Simple case.
   fail_str: |
@@ -27,7 +43,7 @@ test_fail_1:
                 END
         END AS sound
     FROM mytable
-  pass_str: |
+  fix_str: |
     SELECT
         c1,
         CASE
@@ -118,7 +134,7 @@ test_fail_5:
                 CASE WHEN species = 'Dog' THEN 'Woof' END
         END AS sound
     FROM mytable
-  pass_str: |
+  fix_str: |
     SELECT
         c1,
         CASE
@@ -142,16 +158,16 @@ test_double_nesting_1:
                 END
         END AS sound
     FROM mytable
-  pass_str: |
+  fix_str: |
     SELECT
-    c1,
-    CASE
-        WHEN species = 'Rat' THEN
-            CASE
-                WHEN species = 'Dog' THEN 'Woof'
-                WHEN species = 'Bird' THEN 'tweet'
-            END
-    END AS sound
+        c1,
+        CASE
+            WHEN species = 'Rat' THEN
+                CASE
+                    WHEN species = 'Dog' THEN 'Woof'
+                    WHEN species = 'Bird' THEN 'tweet'
+                END
+        END AS sound
     FROM mytable
 
 test_double_nesting_2:
@@ -192,19 +208,8 @@ test_double_nesting_2:
 test_fail_no_copy_code_out_of_template:
   # The rule wants to replace the case statement with coalesce(), but
   # LintFix.has_template_conflicts() correctly prevents it copying code out
-  # of the templated region. Hence, fix_str and fail_str are the same.
+  # of the templated region. Hence, the query is not modified.
   fail_str: |
-    SELECT
-        c1,
-        CASE
-            WHEN species = 'Rat' THEN 'Squeak'
-            ELSE
-                CASE
-                    {{ inner_when }}
-                END
-        END AS sound
-    FROM mytable
-  fix_str: |
     SELECT
         c1,
         CASE

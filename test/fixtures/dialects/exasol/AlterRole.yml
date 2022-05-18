@@ -3,13 +3,14 @@
 # computed by SQLFluff when running the tests. Please run
 # `python test/generate_parse_fixture_yml.py`  to generate them after adding or
 # altering SQL files.
-_hash: b02409a52edf2ba89b628bf79ab8396480d6f7520f19822fc19d133e8763f045
+_hash: 855e291d34e7910d2b5569f438b246f92a44f4ae627bdac79d7611360f261f8e
 file:
 - statement:
-    alter_role:
+    alter_role_statement:
     - keyword: ALTER
     - keyword: ROLE
-    - identifier: role1
+    - role_reference:
+        identifier: role1
     - keyword: SET
     - keyword: CONSUMER_GROUP
     - comparison_operator:
@@ -17,10 +18,11 @@ file:
     - identifier: CEO
 - statement_terminator: ;
 - statement:
-    alter_role:
+    alter_role_statement:
     - keyword: ALTER
     - keyword: ROLE
-    - identifier: role2
+    - role_reference:
+        identifier: role2
     - keyword: SET
     - keyword: CONSUMER_GROUP
     - comparison_operator:
@@ -28,10 +30,11 @@ file:
     - keyword: 'NULL'
 - statement_terminator: ;
 - statement:
-    alter_role:
+    alter_role_statement:
     - keyword: ALTER
     - keyword: ROLE
-    - identifier: '"TABLE"'
+    - role_reference:
+        identifier: '"TABLE"'
     - keyword: SET
     - keyword: CONSUMER_GROUP
     - comparison_operator:

@@ -8,6 +8,7 @@ post linting.
 import os
 import logging
 import shutil
+import stat
 import tempfile
 from typing import (
     Any,
@@ -30,9 +31,9 @@ from sqlfluff.core.string_helpers import findall
 from sqlfluff.core.templaters import TemplatedFile
 
 # Classes needed only for type checking
-from sqlfluff.core.parser.segments.base import BaseSegment, FixPatch
+from sqlfluff.core.parser.segments.base import BaseSegment, FixPatch, EnrichedFixPatch
 
-from sqlfluff.core.linter.common import NoQaDirective, EnrichedFixPatch
+from sqlfluff.core.linter.common import NoQaDirective
 
 # Instantiate the linter logger
 linter_logger: logging.Logger = logging.getLogger("sqlfluff.linter")
@@ -203,9 +204,7 @@ class LintedFile(NamedTuple):
         return not any(self.get_violations(filter_ignore=True))
 
     @staticmethod
-    def _log_hints(
-        patch: Union[EnrichedFixPatch, FixPatch], templated_file: TemplatedFile
-    ):
+    def _log_hints(patch: FixPatch, templated_file: TemplatedFile):
         """Log hints for debugging during patch generation."""
         # This next bit is ALL FOR LOGGING AND DEBUGGING
         max_log_length = 10
@@ -279,18 +278,16 @@ class LintedFile(NamedTuple):
         dedupe_buffer = []
         # We use enumerate so that we get an index for each patch. This is entirely
         # so when debugging logs we can find a given patch again!
-        patch: Union[EnrichedFixPatch, FixPatch]
+        patch: FixPatch  # Could be FixPatch or its subclass, EnrichedFixPatch
         for idx, patch in enumerate(
-            self.tree.iter_patches(templated_str=self.templated_file.templated_str)
+            self.tree.iter_patches(templated_file=self.templated_file)
         ):
             linter_logger.debug("  %s Yielded patch: %s", idx, patch)
             self._log_hints(patch, self.templated_file)
 
-            # Attempt to convert to source space.
+            # Get source_slice.
             try:
-                source_slice = self.templated_file.templated_slice_to_source_slice(
-                    patch.templated_slice,
-                )
+                enriched_patch = patch.enrich(self.templated_file)
             except ValueError:  # pragma: no cover
                 linter_logger.info(
                     "      - Skipping. Source space Value Error. i.e. attempted "
@@ -301,10 +298,10 @@ class LintedFile(NamedTuple):
                 continue
 
             # Check for duplicates
-            dedupe_tuple = (source_slice, patch.fixed_raw)
-            if dedupe_tuple in dedupe_buffer:
+            if enriched_patch.dedupe_tuple() in dedupe_buffer:
                 linter_logger.info(
-                    "      - Skipping. Source space Duplicate: %s", dedupe_tuple
+                    "      - Skipping. Source space Duplicate: %s",
+                    enriched_patch.dedupe_tuple(),
                 )
                 continue
 
@@ -318,18 +315,9 @@ class LintedFile(NamedTuple):
 
             # Get the affected raw slices.
             local_raw_slices = self.templated_file.raw_slices_spanning_source_slice(
-                source_slice
+                enriched_patch.source_slice
             )
             local_type_list = [slc.slice_type for slc in local_raw_slices]
-
-            enriched_patch = EnrichedFixPatch(
-                source_slice=source_slice,
-                templated_slice=patch.templated_slice,
-                patch_category=patch.patch_category,
-                fixed_raw=patch.fixed_raw,
-                templated_str=self.templated_file.templated_str[patch.templated_slice],
-                source_str=self.templated_file.source_str[source_slice],
-            )
 
             # Deal with the easy cases of 1) New code at end 2) only literals
             if not local_type_list or set(local_type_list) == {"literal"}:
@@ -500,24 +488,39 @@ class LintedFile(NamedTuple):
             if suffix:
                 root, ext = os.path.splitext(fname)
                 fname = root + suffix + ext
-            self._safe_create_replace_file(fname, write_buff, self.encoding)
+            self._safe_create_replace_file(self.path, fname, write_buff, self.encoding)
         return success
 
     @staticmethod
-    def _safe_create_replace_file(fname, write_buff, encoding):
+    def _safe_create_replace_file(
+        input_path: str, output_path: str, write_buff: str, encoding: str
+    ):
         # Write to a temporary file first, so in case of encoding or other
         # issues, we don't delete or corrupt the user's existing file.
-        dirname, basename = os.path.split(fname)
+
+        # Get file mode (i.e. permissions) on existing file. We'll preserve the
+        # same permissions on the output file.
+        mode = None
+        try:
+            status = os.stat(input_path)
+        except FileNotFoundError:
+            pass
+        else:
+            if stat.S_ISREG(status.st_mode):
+                mode = stat.S_IMODE(status.st_mode)
+        dirname, basename = os.path.split(output_path)
         with tempfile.NamedTemporaryFile(
             mode="w",
             encoding=encoding,
             prefix=basename,
             dir=dirname,
-            suffix=os.path.splitext(fname)[1],
+            suffix=os.path.splitext(output_path)[1],
             delete=False,
         ) as tmp:
             tmp.file.write(write_buff)
             tmp.flush()
             os.fsync(tmp.fileno())
         # Once the temp file is safely written, replace the existing file.
-        shutil.move(tmp.name, fname)
+        if mode is not None:
+            os.chmod(tmp.name, mode)
+        shutil.move(tmp.name, output_path)

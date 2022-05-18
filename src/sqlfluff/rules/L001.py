@@ -1,9 +1,13 @@
 """Implementation of Rule L001."""
 from sqlfluff.core.rules.base import BaseRule, LintResult, LintFix, RuleContext
 from sqlfluff.core.rules.functional import segment_predicates as sp
-from sqlfluff.core.rules.doc_decorators import document_fix_compatible
+from sqlfluff.core.rules.doc_decorators import (
+    document_fix_compatible,
+    document_groups,
+)
 
 
+@document_groups
 @document_fix_compatible
 class Rule_L001(BaseRule):
     """Unnecessary trailing whitespace.
@@ -29,6 +33,9 @@ class Rule_L001(BaseRule):
             a
         FROM foo
     """
+
+    groups = ("all", "core")
+    needs_raw_stack = True
 
     def _eval(self, context: RuleContext) -> LintResult:
         """Unnecessary trailing whitespace.
@@ -65,7 +72,7 @@ class Rule_L001(BaseRule):
                 # else, it's template code, so don't delete the whitespace because
                 # it's not REALLY trailing whitespace in terms of the raw source
                 # code.
-                if next_raw_slice[0].slice_type != "literal":
+                if next_raw_slice and next_raw_slice[0].slice_type != "literal":
                     return LintResult()
             return LintResult(
                 anchor=deletions[-1],
